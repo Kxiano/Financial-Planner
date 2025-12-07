@@ -2,7 +2,10 @@
 
 'use client';
 
+import { useState } from 'react';
+
 import { AddLancamentoDialog } from '@/components/lancamentos/AddLancamentoDialog';
+import { EditLancamentoDialog } from '@/components/lancamentos/EditLancamentoDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -15,7 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useLocalStorage } from '@/lib/hooks/useLocalStorage';
 import { Lancamento } from '@/lib/types';
-import { Trash2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Trash2, ArrowUpCircle, ArrowDownCircle, Pencil } from 'lucide-react';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 
 export default function LancamentosPage() {
@@ -23,7 +26,8 @@ export default function LancamentosPage() {
     'lancamentos',
     []
   );
-  const { t, locale } = useLanguage();
+  const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
+  const { t, language } = useLanguage();
 
   const handleAddLancamento = (novoLancamento: Omit<Lancamento, 'id'>) => {
     const lancamentoComId: Lancamento = {
@@ -31,6 +35,15 @@ export default function LancamentosPage() {
       id: Date.now().toString(),
     };
     setLancamentos([...lancamentos, lancamentoComId]);
+  };
+
+  const handleEditLancamento = (lancamentoAtualizado: Lancamento) => {
+    setLancamentos(
+      lancamentos.map((l) =>
+        l.id === lancamentoAtualizado.id ? lancamentoAtualizado : l
+      )
+    );
+    setEditingLancamento(null);
   };
 
   const handleDeleteLancamento = (id: string) => {
@@ -48,7 +61,7 @@ export default function LancamentosPage() {
 
   const formatDate = (dateString: string) => {
   const [year, month] = dateString.split('-');
-  return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString(locale, {
+  return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString(language, {
     month: 'long',
     year: 'numeric',
   });
@@ -139,13 +152,22 @@ export default function LancamentosPage() {
                         {formatCurrency(lancamento.valor)}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteLancamento(lancamento.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingLancamento(lancamento)}
+                          >
+                            <Pencil className="h-4 w-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLancamento(lancamento.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -155,6 +177,15 @@ export default function LancamentosPage() {
           )}
         </CardContent>
       </Card>
+
+      {editingLancamento && (
+        <EditLancamentoDialog
+          lancamento={editingLancamento}
+          open={!!editingLancamento}
+          onOpenChange={(open) => !open && setEditingLancamento(null)}
+          onEdit={handleEditLancamento}
+        />
+      )}
     </div>
   );
 }

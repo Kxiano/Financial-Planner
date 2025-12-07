@@ -1,7 +1,10 @@
 // components/metrics/MetricCard.tsx
 
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LucideIcon } from 'lucide-react';
+import { useCurrency } from '@/lib/contexts/CurrencyContext';
 
 interface MetricCardProps {
   title: string;
@@ -23,11 +26,10 @@ export function MetricCard({
   trend,
   formatAsCurrency = false,
 }: MetricCardProps) {
+  const { formatCurrency, currency } = useCurrency();
+  
   const formattedValue = formatAsCurrency
-    ? new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(Number(value))
+    ? formatCurrency(Number(value), currency)
     : value;
 
   return (

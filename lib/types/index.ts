@@ -1,5 +1,23 @@
 // lib/types/index.ts
 
+// Supported currencies
+export type Currency = 'BRL' | 'USD' | 'EUR' | 'GBP' | 'HUF';
+
+export const currencies: { code: Currency; name: string; symbol: string; flag: string }[] = [
+  { code: 'BRL', name: 'Real Brasileiro', symbol: 'R$', flag: '🇧🇷' },
+  { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },
+  { code: 'EUR', name: 'Euro', symbol: '€', flag: '🇪🇺' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', flag: '🇬🇧' },
+  { code: 'HUF', name: 'Hungarian Forint', symbol: 'Ft', flag: '🇭🇺' },
+];
+
+// Exchange rate data
+export interface ExchangeRates {
+  base: Currency;
+  rates: Record<Currency, number>;
+  timestamp: number;
+}
+
 // Tipo para lançamentos mensais
 export interface Lancamento {
   id: string;
@@ -8,6 +26,8 @@ export interface Lancamento {
   categoria: 'income' | 'gasto_fixo' | 'gasto_variavel' | 'investimento' | 'divida' | 'fundo_emergencia';
   descricao: string;
   valor: number;
+  currency?: Currency; // moeda do lançamento
+  exchangeRate?: number; // taxa de câmbio no momento do lançamento
 }
 
 // Tipo para dados do dashboard
@@ -48,4 +68,15 @@ export interface EvolucaoMensal {
   totalInvestido: number;
   totalJuros: number;
   totalAcumulado: number;
+}
+
+// User types
+export interface User {
+  id: string;
+  auth0Id?: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+  isGuest: boolean;
+  currency: Currency;
 }

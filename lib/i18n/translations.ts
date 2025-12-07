@@ -77,8 +77,10 @@ type TranslationKeys = {
   nenhumLancamentoRegistrado: string;
   cliqueNovoLancamento: string;
   temCertezaExcluir: string;
-  
-  // Categorias
+  editarLancamento: string;
+  atualizeDados: string;
+  salvar: string;
+    // Categorias
   receitaSalario: string;
   retornoInvestimento: string;
   gastoFixo: string;
@@ -133,6 +135,40 @@ type TranslationKeys = {
   voceAlcancara: string;
   evolucaoAnual: string;
   evolucaoMensal: string;
+  
+  // Autenticação
+  entrar: string;
+  sair: string;
+  perfil: string;
+  minhaConta: string;
+  continuarComoConvidado: string;
+  modoConvidado: string;
+  usuarioConvidado: string;
+  fazerLogin: string;
+  criarConta: string;
+  bemVindo: string;
+  configuracoes: string;
+  
+  // Moeda
+  moeda: string;
+  selecioneMoeda: string;
+  taxaCambio: string;
+  ultimaAtualizacao: string;
+  convertendoPara: string;
+  moedaBase: string;
+  
+  // Banco de Dados
+  salvando: string;
+  salvo: string;
+  sincronizando: string;
+  sincronizado: string;
+  erroAoSalvar: string;
+  erroAoCarregar: string;
+  tentarNovamente: string;
+  dadosLocais: string;
+  dadosNaNuvem: string;
+  migrarDados: string;
+  migracaoConcluida: string;
 };
 
 export const translations: Record<Language, TranslationKeys> = {
@@ -189,6 +225,9 @@ export const translations: Record<Language, TranslationKeys> = {
     nenhumLancamentoRegistrado: 'Nenhum lançamento registrado ainda.',
     cliqueNovoLancamento: 'Clique em "Novo Lançamento" para começar.',
     temCertezaExcluir: 'Tem certeza que deseja excluir este lançamento?',
+    editarLancamento: 'Editar Lançamento',
+    atualizeDados: 'Atualize os dados do lançamento',
+    salvar: 'Salvar',
     
     // Categorias
     receitaSalario: 'Receita/Salário',
@@ -245,6 +284,40 @@ export const translations: Record<Language, TranslationKeys> = {
     voceAlcancara: 'você alcançará',
     evolucaoAnual: 'Evolução Anual do Investimento',
     evolucaoMensal: 'Evolução Mensal do Investimento',
+    
+    // Autenticação
+    entrar: 'Entrar',
+    sair: 'Sair',
+    perfil: 'Perfil',
+    minhaConta: 'Minha Conta',
+    continuarComoConvidado: 'Continuar como Convidado',
+    modoConvidado: 'Modo Convidado',
+    usuarioConvidado: 'Usuário Convidado',
+    fazerLogin: 'Fazer Login',
+    criarConta: 'Criar Conta',
+    bemVindo: 'Bem-vindo',
+    configuracoes: 'Configurações',
+    
+    // Moeda
+    moeda: 'Moeda',
+    selecioneMoeda: 'Selecione a moeda',
+    taxaCambio: 'Taxa de Câmbio',
+    ultimaAtualizacao: 'Última atualização',
+    convertendoPara: 'Convertendo para',
+    moedaBase: 'Moeda base',
+    
+    // Banco de Dados
+    salvando: 'Salvando...',
+    salvo: 'Salvo',
+    sincronizando: 'Sincronizando...',
+    sincronizado: 'Sincronizado',
+    erroAoSalvar: 'Erro ao salvar',
+    erroAoCarregar: 'Erro ao carregar',
+    tentarNovamente: 'Tentar novamente',
+    dadosLocais: 'Dados locais',
+    dadosNaNuvem: 'Dados na nuvem',
+    migrarDados: 'Migrar dados',
+    migracaoConcluida: 'Migração concluída',
   },
   
   'en-GB': {
@@ -300,6 +373,9 @@ export const translations: Record<Language, TranslationKeys> = {
     nenhumLancamentoRegistrado: 'No transactions registered yet.',
     cliqueNovoLancamento: 'Click "New Transaction" to get started.',
     temCertezaExcluir: 'Are you sure you want to delete this transaction?',
+    editarLancamento: 'Edit Transaction',
+    atualizeDados: 'Update transaction details',
+    salvar: 'Save',
     
     // Categorias
     receitaSalario: 'Income/Salary',
@@ -356,6 +432,40 @@ export const translations: Record<Language, TranslationKeys> = {
     voceAlcancara: 'you will reach',
     evolucaoAnual: 'Annual Investment Evolution',
     evolucaoMensal: 'Monthly Investment Evolution',
+    
+    // Authentication
+    entrar: 'Sign In',
+    sair: 'Sign Out',
+    perfil: 'Profile',
+    minhaConta: 'My Account',
+    continuarComoConvidado: 'Continue as Guest',
+    modoConvidado: 'Guest Mode',
+    usuarioConvidado: 'Guest User',
+    fazerLogin: 'Login',
+    criarConta: 'Create Account',
+    bemVindo: 'Welcome',
+    configuracoes: 'Settings',
+    
+    // Currency
+    moeda: 'Currency',
+    selecioneMoeda: 'Select currency',
+    taxaCambio: 'Exchange Rate',
+    ultimaAtualizacao: 'Last updated',
+    convertendoPara: 'Converting to',
+    moedaBase: 'Base currency',
+    
+    // Database
+    salvando: 'Saving...',
+    salvo: 'Saved',
+    sincronizando: 'Syncing...',
+    sincronizado: 'Synced',
+    erroAoSalvar: 'Error saving',
+    erroAoCarregar: 'Error loading',
+    tentarNovamente: 'Try again',
+    dadosLocais: 'Local data',
+    dadosNaNuvem: 'Cloud data',
+    migrarDados: 'Migrate data',
+    migracaoConcluida: 'Migration completed',
   },
   
   'hu': {
@@ -406,6 +516,9 @@ export const translations: Record<Language, TranslationKeys> = {
     nenhumLancamentoRegistrado: 'Még nincsenek regisztrált tranzakciók.',
     cliqueNovoLancamento: 'Kattintson az "Új Tranzakció" gombra a kezdéshez.',
     temCertezaExcluir: 'Biztosan törölni szeretné ezt a tranzakciót?',
+    editarLancamento: 'Tranzakció Szerkesztése',
+    atualizeDados: 'Frissítse a tranzakció adatait',
+    salvar: 'Mentés',
     receitaSalario: 'Jövedelem/Fizetés',
     retornoInvestimento: 'Befektetési Hozam',
     gastoFixo: 'Fix Kiadás',
@@ -456,6 +569,40 @@ export const translations: Record<Language, TranslationKeys> = {
     voceAlcancara: 'el fogja érni',
     evolucaoAnual: 'Éves Befektetés Fejlődés',
     evolucaoMensal: 'Havi Befektetés Fejlődés',
+    
+    // Hitelesítés
+    entrar: 'Belépés',
+    sair: 'Kilépés',
+    perfil: 'Profil',
+    minhaConta: 'Fiókom',
+    continuarComoConvidado: 'Folytatás vendégként',
+    modoConvidado: 'Vendég mód',
+    usuarioConvidado: 'Vendég felhasználó',
+    fazerLogin: 'Bejelentkezés',
+    criarConta: 'Fiók létrehozása',
+    bemVindo: 'Üdvözöljük',
+    configuracoes: 'Beállítások',
+    
+    // Pénznem
+    moeda: 'Pénznem',
+    selecioneMoeda: 'Válasszon pénznemet',
+    taxaCambio: 'Árfolyam',
+    ultimaAtualizacao: 'Utoljára frissítve',
+    convertendoPara: 'Átváltás',
+    moedaBase: 'Alapvaluta',
+    
+    // Adatbázis
+    salvando: 'Mentés...',
+    salvo: 'Mentve',
+    sincronizando: 'Szinkronizálás...',
+    sincronizado: 'Szinkronizálva',
+    erroAoSalvar: 'Mentési hiba',
+    erroAoCarregar: 'Betöltési hiba',
+    tentarNovamente: 'Próbálja újra',
+    dadosLocais: 'Helyi adatok',
+    dadosNaNuvem: 'Felhő adatok',
+    migrarDados: 'Adatok migrálása',
+    migracaoConcluida: 'Migráció befejezve',
   },
   
   'it': {
@@ -506,6 +653,9 @@ export const translations: Record<Language, TranslationKeys> = {
     nenhumLancamentoRegistrado: 'Nessuna transazione registrata ancora.',
     cliqueNovoLancamento: 'Clicca "Nuova Transazione" per iniziare.',
     temCertezaExcluir: 'Sei sicuro di voler eliminare questa transazione?',
+    editarLancamento: 'Modifica Transazione',
+    atualizeDados: 'Aggiorna i dettagli della transazione',
+    salvar: 'Salva',
     receitaSalario: 'Reddito/Stipendio',
     retornoInvestimento: 'Rendimento Investimento',
     gastoFixo: 'Spesa Fissa',
@@ -556,6 +706,40 @@ export const translations: Record<Language, TranslationKeys> = {
     voceAlcancara: 'raggiungerai',
     evolucaoAnual: 'Evoluzione Annuale dell\'Investimento',
     evolucaoMensal: 'Evoluzione Mensile dell\'Investimento',
+    
+    // Autenticazione
+    entrar: 'Accedi',
+    sair: 'Esci',
+    perfil: 'Profilo',
+    minhaConta: 'Il mio account',
+    continuarComoConvidado: 'Continua come ospite',
+    modoConvidado: 'Modalità ospite',
+    usuarioConvidado: 'Utente ospite',
+    fazerLogin: 'Accedi',
+    criarConta: 'Crea account',
+    bemVindo: 'Benvenuto',
+    configuracoes: 'Impostazioni',
+    
+    // Valuta
+    moeda: 'Valuta',
+    selecioneMoeda: 'Seleziona valuta',
+    taxaCambio: 'Tasso di cambio',
+    ultimaAtualizacao: 'Ultimo aggiornamento',
+    convertendoPara: 'Conversione in',
+    moedaBase: 'Valuta base',
+    
+    // Database
+    salvando: 'Salvataggio...',
+    salvo: 'Salvato',
+    sincronizando: 'Sincronizzazione...',
+    sincronizado: 'Sincronizzato',
+    erroAoSalvar: 'Errore di salvataggio',
+    erroAoCarregar: 'Errore di caricamento',
+    tentarNovamente: 'Riprova',
+    dadosLocais: 'Dati locali',
+    dadosNaNuvem: 'Dati cloud',
+    migrarDados: 'Migra dati',
+    migracaoConcluida: 'Migrazione completata',
   },
   
   'de': {
@@ -606,6 +790,9 @@ export const translations: Record<Language, TranslationKeys> = {
     nenhumLancamentoRegistrado: 'Noch keine Transaktionen registriert.',
     cliqueNovoLancamento: 'Klicken Sie auf "Neue Transaktion" um zu beginnen.',
     temCertezaExcluir: 'Sind Sie sicher, dass Sie diese Transaktion löschen möchten?',
+    editarLancamento: 'Transaktion Bearbeiten',
+    atualizeDados: 'Transaktionsdetails aktualisieren',
+    salvar: 'Speichern',
     receitaSalario: 'Einkommen/Gehalt',
     retornoInvestimento: 'Investitionsertrag',
     gastoFixo: 'Fixkosten',
@@ -656,5 +843,40 @@ export const translations: Record<Language, TranslationKeys> = {
     voceAlcancara: 'werden Sie erreichen',
     evolucaoAnual: 'Jährliche Investitionsentwicklung',
     evolucaoMensal: 'Monatliche Investitionsentwicklung',
+    
+    // Authentifizierung
+    entrar: 'Anmelden',
+    sair: 'Abmelden',
+    perfil: 'Profil',
+    minhaConta: 'Mein Konto',
+    continuarComoConvidado: 'Als Gast fortfahren',
+    modoConvidado: 'Gastmodus',
+    usuarioConvidado: 'Gastbenutzer',
+    fazerLogin: 'Anmelden',
+    criarConta: 'Konto erstellen',
+    bemVindo: 'Willkommen',
+    configuracoes: 'Einstellungen',
+    
+    // Währung
+    moeda: 'Währung',
+    selecioneMoeda: 'Währung auswählen',
+    taxaCambio: 'Wechselkurs',
+    ultimaAtualizacao: 'Zuletzt aktualisiert',
+    convertendoPara: 'Umrechnung in',
+    moedaBase: 'Basiswährung',
+    
+    // Datenbank
+    salvando: 'Speichern...',
+    salvo: 'Gespeichert',
+    sincronizando: 'Synchronisieren...',
+    sincronizado: 'Synchronisiert',
+    erroAoSalvar: 'Fehler beim Speichern',
+    erroAoCarregar: 'Fehler beim Laden',
+    tentarNovamente: 'Erneut versuchen',
+    dadosLocais: 'Lokale Daten',
+    dadosNaNuvem: 'Cloud-Daten',
+    migrarDados: 'Daten migrieren',
+    migracaoConcluida: 'Migration abgeschlossen',
   },
 };
+

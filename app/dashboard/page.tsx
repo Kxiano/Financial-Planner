@@ -19,10 +19,12 @@ import { useLocalStorage } from '@/lib/hooks/useLocalStorage';
 import { Lancamento } from '@/lib/types';
 import { calcularMetricasDashboard, calcularHistoricoMensal, calcularTendencia } from '@/lib/utils/processLancamentos';
 import { useLanguage } from '@/lib/hooks/useLanguage';
+import { useCurrency } from '@/lib/contexts/CurrencyContext';
 
 export default function DashboardPage() {
   const [lancamentos, , isLoaded] = useLocalStorage<Lancamento[]>('lancamentos', []);
-  const { t, locale } = useLanguage();
+  const { t, language } = useLanguage();
+  const { currency, formatCurrency } = useCurrency();
 
   if (!isLoaded) {
     return (
@@ -34,6 +36,11 @@ export default function DashboardPage() {
 
   const data = calcularMetricasDashboard(lancamentos);
   const historicoMensal = calcularHistoricoMensal(lancamentos);
+
+  // Helper function to format currency using context
+  const formatValue = (value: number) => {
+    return formatCurrency(value, currency);
+  };
 
   const ultimosMeses = historicoMensal.slice(-2);
   const mesAtual = ultimosMeses[1] || ultimosMeses[0];
@@ -54,7 +61,7 @@ export default function DashboardPage() {
   const ultimosSeisMeses = historicoMensal.slice(-6);
 
 const incomeChartData = ultimosSeisMeses.map((item) => ({
-  name: new Date(item.mes + '-01').toLocaleDateString(locale, {
+  name: new Date(item.mes + '-01').toLocaleDateString(language, {
     month: 'short',
     year: '2-digit',
   }),
@@ -63,7 +70,7 @@ const incomeChartData = ultimosSeisMeses.map((item) => ({
 }));
 
 const rendimentosChartData = ultimosSeisMeses.map((item) => ({
-  name: new Date(item.mes + '-01').toLocaleDateString(locale, {
+  name: new Date(item.mes + '-01').toLocaleDateString(language, {
     month: 'short',
     year: '2-digit',
   }),
@@ -82,7 +89,7 @@ const rendimentosChartData = ultimosSeisMeses.map((item) => ({
         <div className="hidden md:flex items-center space-x-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
+            {new Date().toLocaleDateString(language, { month: 'long', year: 'numeric' })}
           </span>
 
         </div>

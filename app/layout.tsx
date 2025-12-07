@@ -5,6 +5,8 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { ThemeProvider } from '@/components/theme-provider';
+import { AuthProvider } from '@/lib/contexts/AuthContext';
+import { CurrencyProvider } from '@/lib/contexts/CurrencyContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,11 +25,15 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
-          <DashboardLayout>{children}</DashboardLayout>
+          <AuthProvider>
+            <CurrencyProvider>
+              <DashboardLayout>{children}</DashboardLayout>
+            </CurrencyProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

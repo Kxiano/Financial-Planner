@@ -1,8 +1,8 @@
-// components/lancamentos/AddLancamentoDialog.tsx
+// components/lancamentos/EditLancamentoDialog.tsx
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PlusCircle } from 'lucide-react';
 import { Lancamento, Currency, currencies } from '@/lib/types';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { useCurrency } from '@/lib/contexts/CurrencyContext';
@@ -33,14 +31,16 @@ const capitalizeFirstLetter = (text: string): string => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
-interface AddLancamentoDialogProps {
-  onAdd: (lancamento: Omit<Lancamento, 'id'>) => void;
+interface EditLancamentoDialogProps {
+  lancamento: Lancamento;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onEdit: (lancamento: Lancamento) => void;
 }
 
-export function AddLancamentoDialog({ onAdd }: AddLancamentoDialogProps) {
+export function EditLancamentoDialog({ lancamento, open, onOpenChange, onEdit }: EditLancamentoDialogProps) {
   const { t } = useLanguage();
-  const { currency: userCurrency, exchangeRates } = useCurrency();
-  const [open, setOpen] = useState(false);
+  const { exchangeRates } = useCurrency();
   const [formData, setFormData] = useState<{
     data: string;
     tipo: 'entrada' | 'saida';
@@ -49,13 +49,25 @@ export function AddLancamentoDialog({ onAdd }: AddLancamentoDialogProps) {
     valor: string;
     currency: Currency;
   }>({
-    data: new Date().toISOString().slice(0, 7),
-    tipo: 'entrada',
-    categoria: 'income',
-    descricao: '',
-    valor: '',
-    currency: userCurrency,
+    data: lancamento.data,
+    tipo: lancamento.tipo,
+    categoria: lancamento.categoria,
+    descricao: lancamento.descricao,
+    valor: lancamento.valor.toString(),
+    currency: lancamento.currency || 'BRL',
   });
+
+  // Update form data when lancamento changes
+  useEffect(() => {
+    setFormData({
+      data: lancamento.data,
+      tipo: lancamento.tipo,
+      categoria: lancamento.categoria,
+      descricao: lancamento.descricao,
+      valor: lancamento.valor.toString(),
+      currency: lancamento.currency || 'BRL',
+    });
+  }, [lancamento]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +80,8 @@ export function AddLancamentoDialog({ onAdd }: AddLancamentoDialogProps) {
     // Get current exchange rate for the selected currency
     const currentRate = exchangeRates?.rates[formData.currency] || 1;
 
-    onAdd({
+    onEdit({
+      ...lancamento,
       data: formData.data,
       tipo: formData.tipo,
       categoria: formData.categoria,
@@ -78,16 +91,7 @@ export function AddLancamentoDialog({ onAdd }: AddLancamentoDialogProps) {
       exchangeRate: currentRate,
     });
 
-    setFormData({
-      data: new Date().toISOString().slice(0, 7),
-      tipo: 'entrada',
-      categoria: 'income',
-      descricao: '',
-      valor: '',
-      currency: userCurrency,
-    });
-    
-    setOpen(false);
+    onOpenChange(false);
   };
 
   const categoriasPorTipo = {
@@ -105,19 +109,13 @@ export function AddLancamentoDialog({ onAdd }: AddLancamentoDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          {t('novoLancamento')}
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{t('adicionarLancamento')}</DialogTitle>
+            <DialogTitle>{t('editarLancamento') || 'Editar Lançamento'}</DialogTitle>
             <DialogDescription>
-              {t('registreEntradaSaida')}
+              {t('atualizeDados') || 'Atualize os dados do lançamento'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -221,10 +219,10 @@ export function AddLancamentoDialog({ onAdd }: AddLancamentoDialogProps) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('cancelar')}
             </Button>
-            <Button type="submit">{t('adicionar')}</Button>
+            <Button type="submit">{t('salvar') || 'Salvar'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -9,9 +9,11 @@ datasource db {
 
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  auth0Id   String   @unique
-  email     String   @unique
+  auth0Id   String?  @unique
+  email     String?  @unique
   name      String?
+  isGuest   Boolean  @default(false)
+  currency  String   @default("BRL")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -19,15 +21,17 @@ model User {
 }
 
 model Lancamento {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String   @db.ObjectId
-  data       String   // formato YYYY-MM
-  tipo       String   // entrada ou saida
-  categoria  String
-  descricao  String
-  valor      Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId       String   @db.ObjectId
+  data         String   // formato YYYY-MM
+  tipo         String   // entrada ou saida
+  categoria    String
+  descricao    String
+  valor        Float
+  currency     String   @default("BRL")
+  exchangeRate Float?   // taxa de câmbio no momento do lançamento
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

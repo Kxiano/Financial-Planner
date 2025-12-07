@@ -27,11 +27,19 @@ import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { LanguageToggle } from './laguage-toggle';
+import { UserProfile } from './auth/UserProfile';
+import { LoginButton } from './auth/LoginButton';
+import { LogoutButton } from './auth/LogoutButton';
+import { GuestModeButton } from './auth/GuestModeButton';
+import { CurrencySelector } from './currency/CurrencySelector';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { Separator } from './ui/separator';
 
 export function AppSidebar() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
   const { t, isLoaded } = useLanguage();
+  const { user, isAuthenticated, isGuest } = useAuth();
 
   if (!isLoaded) {
     return null;
@@ -71,7 +79,40 @@ export function AppSidebar() {
           </div>
         </div>
       </SidebarHeader>
+      
       <SidebarContent>
+        {/* User Profile Section */}
+        {user && (
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <UserProfile />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Auth Buttons */}
+        {!user && (
+          <SidebarGroup>
+            <SidebarGroupContent className="space-y-2 px-4">
+              <LoginButton />
+              <GuestModeButton />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        <Separator className="my-2" />
+
+        {/* Currency Selector */}
+        <SidebarGroup>
+          <SidebarGroupLabel>{t('moeda')}</SidebarGroupLabel>
+          <SidebarGroupContent className="px-4">
+            <CurrencySelector />
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <Separator className="my-2" />
+
+        {/* Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel>{t('navegacao')}</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -93,7 +134,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      
       <SidebarFooter className="border-t p-4">
+        {/* Logout Button for authenticated users */}
+        {user && (
+          <div className="mb-3">
+            <LogoutButton />
+          </div>
+        )}
+        
         <div className="flex items-center justify-between">
           <div className="text-xs text-muted-foreground">
             <p>© 2025 {t('planejador')}</p>

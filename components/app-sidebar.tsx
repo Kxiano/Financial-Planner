@@ -39,7 +39,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
   const { t, isLoaded } = useLanguage();
-  const { user, isAuthenticated, isGuest } = useAuth();
+  const { user } = useAuth();
 
   if (!isLoaded) {
     return null;

@@ -3,9 +3,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useCurrencyStore } from '@/lib/store/currencyStore';
 
 import { AddLancamentoDialog } from '@/components/lancamentos/AddLancamentoDialog';
 import { EditLancamentoDialog } from '@/components/lancamentos/EditLancamentoDialog';
+// ... rest of imports
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -29,6 +31,8 @@ export default function LancamentosPage() {
   const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
   const { t, language } = useLanguage();
 
+  const { currency, convertValue, formatValue } = useCurrencyStore();
+
   const handleAddLancamento = (novoLancamento: Omit<Lancamento, 'id'>) => {
     const lancamentoComId: Lancamento = {
       ...novoLancamento,
@@ -50,13 +54,6 @@ export default function LancamentosPage() {
     if (confirm(t('temCertezaExcluir'))) {
       setLancamentos(lancamentos.filter((l) => l.id !== id));
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
   };
 
   const formatDate = (dateString: string) => {
@@ -124,7 +121,9 @@ export default function LancamentosPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lancamentosOrdenados.map((lancamento) => (
+                  {lancamentosOrdenados.map((lancamento) => {
+                    const convertedValue = convertValue(lancamento.valor, lancamento.currency || 'BRL');
+                    return (
                     <TableRow key={lancamento.id}>
                       <TableCell className="font-medium">
                         {formatDate(lancamento.data)}
@@ -149,8 +148,9 @@ export default function LancamentosPage() {
                         }`}
                       >
                         {lancamento.tipo === 'entrada' ? '+' : '-'}
-                        {formatCurrency(lancamento.valor)}
+                        {formatValue(convertedValue, currency)}
                       </TableCell>
+
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -170,7 +170,8 @@ export default function LancamentosPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

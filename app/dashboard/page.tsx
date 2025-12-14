@@ -19,12 +19,20 @@ import { useLocalStorage } from '@/lib/hooks/useLocalStorage';
 import { Lancamento } from '@/lib/types';
 import { calcularMetricasDashboard, calcularHistoricoMensal, calcularTendencia } from '@/lib/utils/processLancamentos';
 import { useLanguage } from '@/lib/hooks/useLanguage';
-import { useCurrency } from '@/lib/contexts/CurrencyContext';
+import { useCurrencyStore } from '@/lib/store/currencyStore';
+import { useMemo } from 'react';
 
 export default function DashboardPage() {
   const [lancamentos, , isLoaded] = useLocalStorage<Lancamento[]>('lancamentos', []);
   const { t, language } = useLanguage();
-  const { currency, formatCurrency } = useCurrency();
+  const { currency, formatValue, convertValue } = useCurrencyStore();
+
+  const lancamentosConvertidos = useMemo(() => {
+    return lancamentos.map(l => ({
+      ...l,
+      valor: convertValue(l.valor, l.currency || 'BRL') // Default to BRL for legacy data
+    }));
+  }, [lancamentos, currency, convertValue]);
 
   if (!isLoaded) {
     return (
@@ -34,12 +42,12 @@ export default function DashboardPage() {
     );
   }
 
-  const data = calcularMetricasDashboard(lancamentos);
-  const historicoMensal = calcularHistoricoMensal(lancamentos);
+  const data = calcularMetricasDashboard(lancamentosConvertidos);
+  const historicoMensal = calcularHistoricoMensal(lancamentosConvertidos);
 
-  // Helper function to format currency using context
-  const formatValue = (value: number) => {
-    return formatCurrency(value, currency);
+  // Helper function to format currency using store
+  const formatValueFn = (value: number) => {
+    return formatValue(value, currency);
   };
 
   const ultimosMeses = historicoMensal.slice(-2);
@@ -76,6 +84,7 @@ const rendimentosChartData = ultimosSeisMeses.map((item) => ({
   }),
   rendimentos: item.rendimentos,
   investimentos: item.investimentos,
+  // We should also convert these? They are already converted via historicoMensal calculated from lancamentosConvertidos
 }));
 
   const mesesCobertura = data.gastosFixos > 0 
@@ -111,28 +120,30 @@ const rendimentosChartData = ultimosSeisMeses.map((item) => ({
               title={t('patrimonioTotal')}
               value={data.patrimonioTotal}
               icon={Wallet}
-              formatAsCurrency
+              formatter={formatValueFn}
               trend={tendenciaPatrimonio}
+              trendLabel={t('vsMesAnterior')}
             />
             <MetricCard
               title={t('sobraMensal')}
               value={data.sobraMensal}
               icon={TrendingUp}
-              formatAsCurrency
+              formatter={formatValueFn}
               trend={data.sobraMensal >= 0 ? { value: 0, isPositive: true } : { value: 0, isPositive: false }}
+              trendLabel={t('vsMesAnterior')}
             />
             <MetricCard
               title={t('fundoEmergencia')}
               value={data.fundoEmergencia}
               icon={PiggyBank}
-              formatAsCurrency
+              formatter={formatValueFn}
               description={`${mesesCobertura} ${t('mesesCobertura')}`}
             />
             <MetricCard
               title={t('dividas')}
               value={data.dividas}
               icon={CreditCard}
-              formatAsCurrency
+              formatter={formatValueFn}
             />
           </div>
 
@@ -141,27 +152,29 @@ const rendimentosChartData = ultimosSeisMeses.map((item) => ({
               title={t('incomeMensal')}
               value={data.incomeTotal}
               icon={DollarSign}
-              formatAsCurrency
+              formatter={formatValueFn}
               trend={tendenciaIncome}
+              trendLabel={t('vsMesAnterior')}
             />
             <MetricCard
               title={t('rendimentos')}
               value={data.rendimentos}
               icon={BarChart3}
-              formatAsCurrency
+              formatter={formatValueFn}
               trend={tendenciaRendimentos}
+              trendLabel={t('vsMesAnterior')}
             />
             <MetricCard
               title={t('gastosFixos')}
               value={data.gastosFixos}
               icon={Calendar}
-              formatAsCurrency
+              formatter={formatValueFn}
             />
             <MetricCard
               title={t('gastosVariaveis')}
               value={data.gastosVariaveis}
               icon={ShoppingCart}
-              formatAsCurrency
+              formatter={formatValueFn}
             />
           </div>
 
@@ -181,6 +194,7 @@ const rendimentosChartData = ultimosSeisMeses.map((item) => ({
                       { dataKey: 'income', name: t('income'), color: '#10b981' },
                       { dataKey: 'gastos', name: t('gastos'), color: '#ef4444' },
                     ]}
+                    formatter={formatValueFn}
                   />
                 </CardContent>
               </Card>
@@ -199,6 +213,7 @@ const rendimentosChartData = ultimosSeisMeses.map((item) => ({
                       { dataKey: 'investimentos', name: t('investimentos'), color: '#3b82f6' },
                       { dataKey: 'rendimentos', name: t('rendimentos'), color: '#8b5cf6' },
                     ]}
+                    formatter={formatValueFn}
                   />
                 </CardContent>
               </Card>

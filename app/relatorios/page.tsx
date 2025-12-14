@@ -20,15 +20,26 @@ import { filterByPeriod } from '@/lib/utils/filterLancamentos';
 import { ArrowUpCircle, ArrowDownCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 
+import { useCurrencyStore } from '@/lib/store/currencyStore';
+
 export default function RelatoriosPage() {
   const [lancamentos, , isLoaded] = useLocalStorage<Lancamento[]>('lancamentos', []);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [customMonth, setCustomMonth] = useState(new Date().toISOString().slice(0, 7));
   const { t, language } = useLanguage();
 
+  const { currency, convertValue, formatValue } = useCurrencyStore();
+
+  const lancamentosConvertidos = useMemo(() => {
+    return lancamentos.map((l) => ({
+      ...l,
+      valor: convertValue(l.valor, l.currency || 'BRL'),
+    }));
+  }, [lancamentos, currency, convertValue]);
+
   const lancamentosFiltrados = useMemo(() => {
-    return filterByPeriod(lancamentos, selectedPeriod, customMonth);
-  }, [lancamentos, selectedPeriod, customMonth]);
+    return filterByPeriod(lancamentosConvertidos, selectedPeriod, customMonth);
+  }, [lancamentosConvertidos, selectedPeriod, customMonth]);
 
   const totais = useMemo(() => {
     const totalEntradas = lancamentosFiltrados
@@ -48,11 +59,9 @@ export default function RelatoriosPage() {
     };
   }, [lancamentosFiltrados]);
 
+  // Use the store's formatValue instead of local formatCurrency function
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    return formatValue(value, currency);
   };
 
   const formatDate = (dateString: string) => {

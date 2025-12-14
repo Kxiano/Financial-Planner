@@ -20,8 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const GUEST_USER_KEY = 'guest_user';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkAuth();
@@ -69,8 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = () => {
-    // For now, just show an alert. Auth0 integration can be completed later
-    alert('Auth0 login will be configured. For now, please use Guest Mode.');
+    window.location.href = '/api/auth/login';
   };
 
   const logout = async () => {
@@ -79,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(GUEST_USER_KEY);
       setUser(null);
     } else {
-      // Clear authenticated user
-      setUser(null);
+      // Redirect to Auth0 logout
+      window.location.href = '/api/auth/logout';
     }
   };
 

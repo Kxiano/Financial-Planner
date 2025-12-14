@@ -6,9 +6,10 @@ import { prisma } from '@/lib/prisma';
 // PUT update lancamento
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params;
     const { id } = params;
 
     // Check Auth0 session
@@ -73,9 +74,10 @@ export async function PUT(
 // DELETE lancamento
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params;
     const { id } = params;
 
     // Check Auth0 session

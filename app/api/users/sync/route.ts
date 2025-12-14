@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
 
     // Create all lancamentos for this user
     const created = await prisma.lancamento.createMany({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       data: lancamentos.map((l: any) => ({
         userId: dbUser.id,
         data: l.data,

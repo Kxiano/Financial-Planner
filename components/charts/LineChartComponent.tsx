@@ -28,12 +28,14 @@ interface LineChartComponentProps {
     color: string;
   }[];
   height?: number;
+  formatter?: (value: number) => string;
 }
 
 export function LineChartComponent({
   data,
   lines,
   height = 300,
+  formatter,
 }: LineChartComponentProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -68,10 +70,12 @@ export function LineChartComponent({
           tick={{ fill: textColor, fontSize: 12 }}
           stroke={textColor}
           tickFormatter={(value) =>
-            new Intl.NumberFormat('pt-BR', {
-              notation: 'compact',
-              compactDisplay: 'short',
-            }).format(value)
+            formatter
+              ? formatter(value)
+              : new Intl.NumberFormat('pt-BR', {
+                  notation: 'compact',
+                  compactDisplay: 'short',
+                }).format(value)
           }
         />
         <Tooltip
@@ -88,12 +92,15 @@ export function LineChartComponent({
             color: isDark ? '#fafafa' : '#09090b',
           }}
           formatter={(value: number) =>
-            new Intl.NumberFormat('pt-BR', {
-              style: 'currency',
-              currency: 'BRL',
-            }).format(value)
+            formatter
+              ? formatter(value)
+              : new Intl.NumberFormat('pt-BR', {
+                  style: 'currency',
+                  currency: 'BRL',
+                }).format(value)
           }
         />
+        {/* ... rest of chart */}
         <Legend
           wrapperStyle={{
             color: textColor,

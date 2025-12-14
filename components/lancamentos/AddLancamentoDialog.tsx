@@ -25,7 +25,7 @@ import {
 import { PlusCircle } from 'lucide-react';
 import { Lancamento, Currency, currencies } from '@/lib/types';
 import { useLanguage } from '@/lib/hooks/useLanguage';
-import { useCurrency } from '@/lib/contexts/CurrencyContext';
+import { useCurrencyStore } from '@/lib/store/currencyStore';
 
 // Helper function to capitalize first letter
 const capitalizeFirstLetter = (text: string): string => {
@@ -39,7 +39,7 @@ interface AddLancamentoDialogProps {
 
 export function AddLancamentoDialog({ onAdd }: AddLancamentoDialogProps) {
   const { t } = useLanguage();
-  const { currency: userCurrency, exchangeRates } = useCurrency();
+  const { currency: userCurrency, exchangeRates } = useCurrencyStore();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<{
     data: string;

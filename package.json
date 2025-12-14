@@ -9,7 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@auth0/nextjs-auth0": "^4.10.0",
+    "@auth0/nextjs-auth0": "^3.5.0",
     "@prisma/client": "^6.17.1",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -30,8 +30,10 @@
     "react": "19.1.0",
     "react-day-picker": "^9.11.1",
     "react-dom": "19.1.0",
+    "react-is": "^19.2.3",
     "recharts": "^3.2.1",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

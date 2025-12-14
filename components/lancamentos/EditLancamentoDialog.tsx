@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Lancamento, Currency, currencies } from '@/lib/types';
 import { useLanguage } from '@/lib/hooks/useLanguage';
-import { useCurrency } from '@/lib/contexts/CurrencyContext';
+import { useCurrencyStore } from '@/lib/store/currencyStore';
 
 // Helper function to capitalize first letter
 const capitalizeFirstLetter = (text: string): string => {
@@ -40,7 +40,7 @@ interface EditLancamentoDialogProps {
 
 export function EditLancamentoDialog({ lancamento, open, onOpenChange, onEdit }: EditLancamentoDialogProps) {
   const { t } = useLanguage();
-  const { exchangeRates } = useCurrency();
+  const { exchangeRates } = useCurrencyStore();
   const [formData, setFormData] = useState<{
     data: string;
     tipo: 'entrada' | 'saida';

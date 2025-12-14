@@ -4,7 +4,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LucideIcon } from 'lucide-react';
-import { useCurrency } from '@/lib/contexts/CurrencyContext';
+
 
 interface MetricCardProps {
   title: string;
@@ -15,7 +15,7 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
-  formatAsCurrency?: boolean;
+  trendLabel?: string;
 }
 
 export function MetricCard({
@@ -24,12 +24,13 @@ export function MetricCard({
   description,
   icon: Icon,
   trend,
-  formatAsCurrency = false,
-}: MetricCardProps) {
-  const { formatCurrency, currency } = useCurrency();
+
+  formatter,
+  trendLabel,
+}: MetricCardProps & { formatter?: (value: number) => string }) {
   
-  const formattedValue = formatAsCurrency
-    ? formatCurrency(Number(value), currency)
+  const formattedValue = formatter 
+    ? formatter(Number(value))
     : value;
 
   return (
@@ -52,7 +53,7 @@ export function MetricCard({
             >
               {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
             </span>
-            <span className="text-muted-foreground ml-1">vs mês anterior</span>
+            <span className="text-muted-foreground ml-1">{trendLabel || 'vs mês anterior'}</span>
           </div>
         )}
       </CardContent>

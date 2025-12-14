@@ -32,7 +32,7 @@ export default function DashboardPage() {
       ...l,
       valor: convertValue(l.valor, l.currency || 'BRL') // Default to BRL for legacy data
     }));
-  }, [lancamentos, currency, convertValue]);
+  }, [lancamentos, convertValue]);
 
   if (!isLoaded) {
     return (

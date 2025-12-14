@@ -35,7 +35,7 @@ export default function RelatoriosPage() {
       ...l,
       valor: convertValue(l.valor, l.currency || 'BRL'),
     }));
-  }, [lancamentos, currency, convertValue]);
+  }, [lancamentos, convertValue]);
 
   const lancamentosFiltrados = useMemo(() => {
     return filterByPeriod(lancamentosConvertidos, selectedPeriod, customMonth);

@@ -169,6 +169,38 @@ type TranslationKeys = {
   dadosNaNuvem: string;
   migrarDados: string;
   migracaoConcluida: string;
+  
+  // Welcome Modal
+  welcomeToPlanner: string;
+  organizeFinances: string;
+  startNow: string;
+  loginToAccount: string;
+  createAccountButton: string;
+  orSeparator: string;
+  continueAsGuest: string;
+  guestDataInfo: string;
+  
+  // Guest Warning
+  guestWarningTitle: string;
+  guestWarningDescription: string;
+  
+  // Toast Messages
+  syncingData: string;
+  syncingDescription: string;
+  syncSuccess: string;
+  syncSuccessDescription: string;
+  syncError: string;
+  syncErrorDescription: string;
+  transactionAdded: string;
+  transactionUpdated: string;
+  transactionDeleted: string;
+  errorSaving: string;
+  errorUpdating: string;
+  errorDeleting: string;
+  networkError: string;
+  errorGeneric: string;
+  success: string;
+  error: string;
 };
 
 export const translations: Record<Language, TranslationKeys> = {
@@ -318,6 +350,38 @@ export const translations: Record<Language, TranslationKeys> = {
     dadosNaNuvem: 'Dados na nuvem',
     migrarDados: 'Migrar dados',
     migracaoConcluida: 'Migração concluída',
+    
+    // Welcome Modal
+    welcomeToPlanner: 'Bem-vindo ao Planejador',
+    organizeFinances: 'Organize suas finanças de forma simples e eficiente.',
+    startNow: 'Você pode começar agora mesmo!',
+    loginToAccount: 'Entrar na minha conta',
+    createAccountButton: 'Criar uma conta',
+    orSeparator: 'Ou',
+    continueAsGuest: 'Continuar como Convidado',
+    guestDataInfo: 'Modo convidado salva dados apenas neste dispositivo.',
+    
+    // Guest Warning
+    guestWarningTitle: 'Você está no modo convidado',
+    guestWarningDescription: 'Seus dados estão salvos apenas neste dispositivo. Crie uma conta para salvar na nuvem.',
+    
+    // Toast Messages
+    syncingData: 'Sincronizando dados...',
+    syncingDescription: 'Passando seus dados locais para a nuvem.',
+    syncSuccess: 'Sucesso!',
+    syncSuccessDescription: 'Dados sincronizados com sucesso.',
+    syncError: 'Erro na sincronização',
+    syncErrorDescription: 'Não foi possível salvar seus dados locais.',
+    transactionAdded: 'Lançamento adicionado.',
+    transactionUpdated: 'Lançamento atualizado.',
+    transactionDeleted: 'Lançamento removido.',
+    errorSaving: 'Erro ao salvar lançamento.',
+    errorUpdating: 'Falha ao atualizar.',
+    errorDeleting: 'Falha ao remover.',
+    networkError: 'Falha de rede ou servidor.',
+    errorGeneric: 'Algo deu errado.',
+    success: 'Sucesso',
+    error: 'Erro',
   },
   
   'en-GB': {
@@ -466,6 +530,38 @@ export const translations: Record<Language, TranslationKeys> = {
     dadosNaNuvem: 'Cloud data',
     migrarDados: 'Migrate data',
     migracaoConcluida: 'Migration completed',
+    
+    // Welcome Modal
+    welcomeToPlanner: 'Welcome to the Planner',
+    organizeFinances: 'Organize your finances simply and efficiently.',
+    startNow: 'You can start right now!',
+    loginToAccount: 'Login to my account',
+    createAccountButton: 'Create an account',
+    orSeparator: 'Or',
+    continueAsGuest: 'Continue as Guest',
+    guestDataInfo: 'Guest mode saves data only on this device.',
+    
+    // Guest Warning
+    guestWarningTitle: 'You are in guest mode',
+    guestWarningDescription: 'Your data is saved only on this device. Create an account to save to the cloud.',
+    
+    // Toast Messages
+    syncingData: 'Syncing data...',
+    syncingDescription: 'Uploading your local data to the cloud.',
+    syncSuccess: 'Success!',
+    syncSuccessDescription: 'Data synced successfully.',
+    syncError: 'Sync error',
+    syncErrorDescription: 'Could not save your local data.',
+    transactionAdded: 'Transaction added.',
+    transactionUpdated: 'Transaction updated.',
+    transactionDeleted: 'Transaction deleted.',
+    errorSaving: 'Error saving transaction.',
+    errorUpdating: 'Failed to update.',
+    errorDeleting: 'Failed to delete.',
+    networkError: 'Network or server error.',
+    errorGeneric: 'Something went wrong.',
+    success: 'Success',
+    error: 'Error',
   },
   
   'hu': {
@@ -603,6 +699,38 @@ export const translations: Record<Language, TranslationKeys> = {
     dadosNaNuvem: 'Felhő adatok',
     migrarDados: 'Adatok migrálása',
     migracaoConcluida: 'Migráció befejezve',
+    
+    // Welcome Modal
+    welcomeToPlanner: 'Üdvözöljük a Tervezőben',
+    organizeFinances: 'Rendezze pénzügyeit egyszerűen és hatékonyan.',
+    startNow: 'Kezdje el most!',
+    loginToAccount: 'Bejelentkezés a fiókomba',
+    createAccountButton: 'Fiók létrehozása',
+    orSeparator: 'Vagy',
+    continueAsGuest: 'Folytatás vendégként',
+    guestDataInfo: 'Vendég mód csak ezen a készüléken menti az adatokat.',
+    
+    // Guest Warning
+    guestWarningTitle: 'Vendég módban van',
+    guestWarningDescription: 'Az adatai csak ezen a készüléken vannak mentve. Hozzon létre fiókot a felhőbe mentéshez.',
+    
+    // Toast Messages
+    syncingData: 'Adatok szinkronizálása...',
+    syncingDescription: 'Helyi adatok feltöltése a felhőbe.',
+    syncSuccess: 'Sikeres!',
+    syncSuccessDescription: 'Adatok sikeresen szinkronizálva.',
+    syncError: 'Szinkronizálási hiba',
+    syncErrorDescription: 'Nem sikerült menteni a helyi adatokat.',
+    transactionAdded: 'Tranzakció hozzáadva.',
+    transactionUpdated: 'Tranzakció frissítve.',
+    transactionDeleted: 'Tranzakció törölve.',
+    errorSaving: 'Hiba a tranzakció mentésekor.',
+    errorUpdating: 'Sikertelen frissítés.',
+    errorDeleting: 'Sikertelen törlés.',
+    networkError: 'Hálózati vagy szerverhiba.',
+    errorGeneric: 'Valami hiba történt.',
+    success: 'Sikeres',
+    error: 'Hiba',
   },
   
   'it': {
@@ -740,6 +868,38 @@ export const translations: Record<Language, TranslationKeys> = {
     dadosNaNuvem: 'Dati cloud',
     migrarDados: 'Migra dati',
     migracaoConcluida: 'Migrazione completata',
+    
+    // Welcome Modal
+    welcomeToPlanner: 'Benvenuto nel Pianificatore',
+    organizeFinances: 'Organizza le tue finanze in modo semplice ed efficiente.',
+    startNow: 'Puoi iniziare subito!',
+    loginToAccount: 'Accedi al mio account',
+    createAccountButton: 'Crea un account',
+    orSeparator: 'Oppure',
+    continueAsGuest: 'Continua come ospite',
+    guestDataInfo: 'La modalità ospite salva i dati solo su questo dispositivo.',
+    
+    // Guest Warning
+    guestWarningTitle: 'Sei in modalità ospite',
+    guestWarningDescription: 'I tuoi dati sono salvati solo su questo dispositivo. Crea un account per salvarli nel cloud.',
+    
+    // Toast Messages
+    syncingData: 'Sincronizzazione dati...',
+    syncingDescription: 'Caricamento dei dati locali nel cloud.',
+    syncSuccess: 'Successo!',
+    syncSuccessDescription: 'Dati sincronizzati con successo.',
+    syncError: 'Errore di sincronizzazione',
+    syncErrorDescription: 'Impossibile salvare i dati locali.',
+    transactionAdded: 'Transazione aggiunta.',
+    transactionUpdated: 'Transazione aggiornata.',
+    transactionDeleted: 'Transazione eliminata.',
+    errorSaving: 'Errore nel salvataggio della transazione.',
+    errorUpdating: 'Aggiornamento fallito.',
+    errorDeleting: 'Eliminazione fallita.',
+    networkError: 'Errore di rete o server.',
+    errorGeneric: 'Qualcosa è andato storto.',
+    success: 'Successo',
+    error: 'Errore',
   },
   
   'de': {
@@ -877,6 +1037,38 @@ export const translations: Record<Language, TranslationKeys> = {
     dadosNaNuvem: 'Cloud-Daten',
     migrarDados: 'Daten migrieren',
     migracaoConcluida: 'Migration abgeschlossen',
+    
+    // Welcome Modal
+    welcomeToPlanner: 'Willkommen beim Planer',
+    organizeFinances: 'Organisieren Sie Ihre Finanzen einfach und effizient.',
+    startNow: 'Sie können jetzt loslegen!',
+    loginToAccount: 'In mein Konto einloggen',
+    createAccountButton: 'Konto erstellen',
+    orSeparator: 'Oder',
+    continueAsGuest: 'Als Gast fortfahren',
+    guestDataInfo: 'Gastmodus speichert Daten nur auf diesem Gerät.',
+    
+    // Guest Warning
+    guestWarningTitle: 'Sie sind im Gastmodus',
+    guestWarningDescription: 'Ihre Daten werden nur auf diesem Gerät gespeichert. Erstellen Sie ein Konto, um in der Cloud zu speichern.',
+    
+    // Toast Messages
+    syncingData: 'Daten synchronisieren...',
+    syncingDescription: 'Lokale Daten in die Cloud hochladen.',
+    syncSuccess: 'Erfolg!',
+    syncSuccessDescription: 'Daten erfolgreich synchronisiert.',
+    syncError: 'Synchronisierungsfehler',
+    syncErrorDescription: 'Lokale Daten konnten nicht gespeichert werden.',
+    transactionAdded: 'Transaktion hinzugefügt.',
+    transactionUpdated: 'Transaktion aktualisiert.',
+    transactionDeleted: 'Transaktion gelöscht.',
+    errorSaving: 'Fehler beim Speichern der Transaktion.',
+    errorUpdating: 'Aktualisierung fehlgeschlagen.',
+    errorDeleting: 'Löschen fehlgeschlagen.',
+    networkError: 'Netzwerk- oder Serverfehler.',
+    errorGeneric: 'Etwas ist schief gelaufen.',
+    success: 'Erfolg',
+    error: 'Fehler',
   },
 };
 

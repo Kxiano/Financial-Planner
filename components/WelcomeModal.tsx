@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useLanguage } from '@/lib/hooks/useLanguage';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import { Rocket, LogIn, UserPlus, User } from 'lucide-react';
 
 export function WelcomeModal() {
   const { isAuthenticated, isGuest, loading, continueAsGuest, login } = useAuth();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -39,23 +41,6 @@ export function WelcomeModal() {
     setOpen(false);
   };
 
-  // Prevent closing by clicking outside or escape if strictly enforcing choice (optional, but good for welcome)
-  // For now, we allow closing implicitly by becoming guest or logging in.
-  // Actually, ShadCN Dialog `onOpenChange` handles close. If we want to restart it immediately or force choice:
-  // We can just rely on state. If they close it without choosing, they see the auth restricted app likely or just empty state.
-  // Ideally force choice:
-  const handleOpenChange = (isOpen: boolean) => {
-      if (!isOpen && !isAuthenticated && !isGuest) {
-          // Prevent closing if no choice made? allow for now, maybe they want to look around (though app might be empty)
-          // Better: If they close, maybe default to Guest? Or just let them close.
-          // Let's force them to choose for better UX as requested "modal que deverá aparecer... escolher entre..."
-          // To force, we just don't allow setting open to false unless triggered by action.
-          // setOpen(open); // Do nothing provided actions close it.
-      } else {
-          setOpen(isOpen);
-      }
-  };
-
   if (loading) return null;
 
   return (
@@ -65,22 +50,21 @@ export function WelcomeModal() {
           <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4 w-fit">
             <Rocket className="w-10 h-10 text-primary" />
           </div>
-          <DialogTitle className="text-2xl font-bold text-center">Bem-vindo ao Planejador</DialogTitle>
+          <DialogTitle className="text-2xl font-bold text-center">{t('welcomeToPlanner')}</DialogTitle>
           <DialogDescription className="text-center pt-2">
-            Organize suas finanças de forma simples e eficiente.
-            Você pode começar agora mesmo!
+            {t('organizeFinances')} {t('startNow')}
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-3 py-4">
           <Button onClick={handleLogin} className="w-full gap-2" size="lg">
             <LogIn className="w-4 h-4" />
-            Entrar na minha conta
+            {t('loginToAccount')}
           </Button>
           
           <Button onClick={handleSignup} variant="outline" className="w-full gap-2">
             <UserPlus className="w-4 h-4" />
-            Criar uma conta
+            {t('createAccountButton')}
           </Button>
 
           <div className="relative my-2">
@@ -88,22 +72,23 @@ export function WelcomeModal() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">Ou</span>
+              <span className="bg-background px-2 text-muted-foreground">{t('orSeparator')}</span>
             </div>
           </div>
 
           <Button onClick={handleGuest} variant="ghost" className="w-full gap-2">
             <User className="w-4 h-4" />
-            Continuar como Convidado
+            {t('continueAsGuest')}
           </Button>
         </div>
         
         <DialogFooter className="sm:justify-center">
             <p className="text-xs text-muted-foreground text-center">
-                Modo convidado salva dados apenas neste dispositivo.
+                {t('guestDataInfo')}
             </p>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+

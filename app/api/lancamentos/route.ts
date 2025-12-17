@@ -42,9 +42,25 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     
     // Ensure user exists
+    // Ensure user exists (Upsert logic with Account Linking)
     let user = await prisma.user.findUnique({
       where: { auth0Id: session.user.sub }
     });
+
+    if (!user && session.user.email) {
+      // Try to find by email to link account
+      const existingUserByEmail = await prisma.user.findUnique({
+        where: { email: session.user.email }
+      });
+
+      if (existingUserByEmail) {
+        // Link the accounts
+        user = await prisma.user.update({
+          where: { id: existingUserByEmail.id },
+          data: { auth0Id: session.user.sub, name: session.user.name }
+        });
+      }
+    }
 
     if (!user) {
       user = await prisma.user.create({

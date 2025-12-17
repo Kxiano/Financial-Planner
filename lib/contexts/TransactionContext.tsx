@@ -112,10 +112,17 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
         if (res.ok) {
           await fetchTransactions();
           toast({ title: "Sucesso", description: "Lançamento adicionado." });
+        } else {
+             const errorData = await res.json().catch(() => ({}));
+             toast({ 
+                 title: "Erro", 
+                 description: errorData.error || "Erro ao salvar lançamento.", 
+                 variant: "destructive" 
+             });
         }
       } catch (error) {
         console.error(error);
-        toast({ title: "Erro", description: "Falha ao salvar lançamento.", variant: "destructive" });
+        toast({ title: "Erro", description: "Falha de rede ou servidor.", variant: "destructive" });
       }
     }
   };

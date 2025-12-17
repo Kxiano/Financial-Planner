@@ -21,6 +21,9 @@ export interface ExchangeRates {
 // Tipo para lançamentos mensais
 export interface Lancamento {
   id: string;
+  userId?: string;
+  createdAt?: string;
+  updatedAt?: string;
   data: string; // formato YYYY-MM
   tipo: 'entrada' | 'saida';
   categoria: 'income' | 'gasto_fixo' | 'gasto_variavel' | 'investimento' | 'divida' | 'fundo_emergencia';

@@ -1,112 +1,78 @@
-// app/api/lancamentos/route.ts
-
+import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// GET all lancamentos for the current user
-export async function GET(req: NextRequest) {
+export async function GET() {
+  const session = await getSession();
+  
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    // Check Auth0 session
-    const authResponse = await fetch(`${req.nextUrl.origin}/api/auth/me`, {
-      headers: { cookie: req.headers.get('cookie') || '' },
+    const user = await prisma.user.findUnique({
+      where: { auth0Id: session.user.sub }
     });
 
-    let userId: string | null = null;
-
-    if (authResponse.ok) {
-      const user = await authResponse.json();
-      
-      // Find or create user in database
-      const dbUser = await prisma.user.upsert({
-        where: { auth0Id: user.sub },
-        update: {
-          email: user.email,
-          name: user.name,
-        },
-        create: {
-          auth0Id: user.sub,
-          email: user.email,
-          name: user.name,
-          isGuest: false,
-        },
-      });
-      
-      userId = dbUser.id;
+    if (!user) {
+      // If user doesn't exist in DB yet (first login without sync?), return empty
+      return NextResponse.json([]); 
     }
 
-    // If no authenticated user, return empty array (guest users use localStorage)
-    if (!userId) {
-      return NextResponse.json([]);
-    }
-
-    // Fetch lancamentos for this user
     const lancamentos = await prisma.lancamento.findMany({
-      where: { userId },
-      orderBy: { data: 'desc' },
+      where: { userId: user.id },
+      orderBy: { data: 'desc' }
     });
 
     return NextResponse.json(lancamentos);
   } catch (error) {
     console.error('Error fetching lancamentos:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch lancamentos' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-// POST create new lancamento
 export async function POST(req: NextRequest) {
+  const session = await getSession();
+
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    // Check Auth0 session
-    const authResponse = await fetch(`${req.nextUrl.origin}/api/auth/me`, {
-      headers: { cookie: req.headers.get('cookie') || '' },
+    const body = await req.json();
+    
+    // Ensure user exists
+    let user = await prisma.user.findUnique({
+      where: { auth0Id: session.user.sub }
     });
 
-    if (!authResponse.ok) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          auth0Id: session.user.sub,
+          email: session.user.email,
+          name: session.user.name,
+          isGuest: false,
+        }
+      });
     }
 
-    const user = await authResponse.json();
-    
-    // Find or create user in database
-    const dbUser = await prisma.user.upsert({
-      where: { auth0Id: user.sub },
-      update: {},
-      create: {
-        auth0Id: user.sub,
-        email: user.email,
-        name: user.name,
-        isGuest: false,
-      },
-    });
-
-    const body = await req.json();
-    const { data, tipo, categoria, descricao, valor, currency, exchangeRate } = body;
-
-    // Create lancamento
     const lancamento = await prisma.lancamento.create({
       data: {
-        userId: dbUser.id,
-        data,
-        tipo,
-        categoria,
-        descricao,
-        valor,
-        currency: currency || 'BRL',
-        exchangeRate,
-      },
+        userId: user.id,
+        data: body.data,
+        tipo: body.tipo,
+        categoria: body.categoria,
+        descricao: body.descricao,
+        valor: parseFloat(body.valor),
+        currency: body.currency,
+        exchangeRate: body.exchangeRate,
+      }
     });
 
-    return NextResponse.json(lancamento, { status: 201 });
+    return NextResponse.json(lancamento);
   } catch (error) {
     console.error('Error creating lancamento:', error);
-    return NextResponse.json(
-      { error: 'Failed to create lancamento' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

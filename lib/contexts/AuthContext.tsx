@@ -32,19 +32,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/me');
       
       if (response.ok) {
-        const data = await response.json();
-        // User is authenticated with Auth0
-        setUser({
-          id: data.sub,
-          auth0Id: data.sub,
-          email: data.email,
-          name: data.name,
-          picture: data.picture,
-          isGuest: false,
-          currency: data.currency || 'BRL',
-        });
-        setLoading(false);
-        return;
+        if (response.status === 204) {
+             // No content, not authenticated
+        } else {
+            const data = await response.json();
+            // User is authenticated with Auth0
+            setUser({
+              id: data.sub,
+              auth0Id: data.sub,
+              email: data.email,
+              name: data.name,
+              picture: data.picture,
+              isGuest: false,
+              currency: data.currency || 'BRL',
+            });
+            setLoading(false);
+            return;
+        }
       }
 
       // Check for guest user in localStorage

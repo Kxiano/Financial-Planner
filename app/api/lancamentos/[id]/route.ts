@@ -1,128 +1,87 @@
-// app/api/lancamentos/[id]/route.ts
-
+import { getSession } from '@auth0/nextjs-auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// PUT update lancamento
-export async function PUT(
-  req: NextRequest,
-  props: { params: Promise<{ id: string }> }
-) {
-  try {
-    const params = await props.params;
-    const { id } = params;
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const session = await getSession();
 
-    // Check Auth0 session
-    const authResponse = await fetch(`${req.nextUrl.origin}/api/auth/me`, {
-      headers: { cookie: req.headers.get('cookie') || '' },
-    });
-
-    if (!authResponse.ok) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    const user = await authResponse.json();
-    
-    // Find user in database
-    const dbUser = await prisma.user.findUnique({
-      where: { auth0Id: user.sub },
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Verify ownership
-    const existing = await prisma.lancamento.findUnique({
-      where: { id },
-    });
-
-    if (!existing || existing.userId !== dbUser.id) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
-    }
-
-    const body = await req.json();
-    const { data, tipo, categoria, descricao, valor, currency, exchangeRate } = body;
-
-    // Update lancamento
-    const lancamento = await prisma.lancamento.update({
-      where: { id },
-      data: {
-        data,
-        tipo,
-        categoria,
-        descricao,
-        valor,
-        currency,
-        exchangeRate,
-      },
-    });
-
-    return NextResponse.json(lancamento);
-  } catch (error) {
-    console.error('Error updating lancamento:', error);
-    return NextResponse.json(
-      { error: 'Failed to update lancamento' },
-      { status: 500 }
-    );
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-}
 
-// DELETE lancamento
-export async function DELETE(
-  req: NextRequest,
-  props: { params: Promise<{ id: string }> }
-) {
   try {
-    const params = await props.params;
-    const { id } = params;
-
-    // Check Auth0 session
-    const authResponse = await fetch(`${req.nextUrl.origin}/api/auth/me`, {
-      headers: { cookie: req.headers.get('cookie') || '' },
+    const user = await prisma.user.findUnique({
+      where: { auth0Id: session.user.sub }
     });
 
-    if (!authResponse.ok) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    const user = await authResponse.json();
-    
-    // Find user in database
-    const dbUser = await prisma.user.findUnique({
-      where: { auth0Id: user.sub },
-    });
-
-    if (!dbUser) {
+    if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Verify ownership
-    const existing = await prisma.lancamento.findUnique({
-      where: { id },
+    const lancamento = await prisma.lancamento.findUnique({
+      where: { id: params.id }
     });
 
-    if (!existing || existing.userId !== dbUser.id) {
-      return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
+    if (!lancamento || lancamento.userId !== user.id) {
+      return NextResponse.json({ error: 'Not found or unauthorized' }, { status: 404 });
     }
 
-    // Delete lancamento
     await prisma.lancamento.delete({
-      where: { id },
+      where: { id: params.id }
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting lancamento:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete lancamento' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
+  const session = await getSession();
+
+  if (!session || !session.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const user = await prisma.user.findUnique({
+      where: { auth0Id: session.user.sub }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Verify ownership
+    const existingLancamento = await prisma.lancamento.findUnique({
+      where: { id: params.id }
+    });
+
+    if (!existingLancamento || existingLancamento.userId !== user.id) {
+      return NextResponse.json({ error: 'Not found or unauthorized' }, { status: 404 });
+    }
+
+    const updatedLancamento = await prisma.lancamento.update({
+      where: { id: params.id },
+      data: {
+        data: body.data,
+        tipo: body.tipo,
+        categoria: body.categoria,
+        descricao: body.descricao,
+        valor: parseFloat(body.valor),
+        currency: body.currency,
+        exchangeRate: body.exchangeRate,
+      }
+    });
+
+    return NextResponse.json(updatedLancamento);
+  } catch (error) {
+    console.error('Error updating lancamento:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

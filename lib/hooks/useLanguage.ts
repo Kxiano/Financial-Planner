@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import { Language, translations } from '@/lib/i18n/translations';
 
 export function useLanguage() {
-  const [language, setLanguageState] = useState<Language>('pt-BR');
+  const [language, setLanguageState] = useState<Language>('en-GB');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {

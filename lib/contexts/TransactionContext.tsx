@@ -24,12 +24,19 @@ export function TransactionProvider({ children }: { children: React.ReactNode })
   const [isDbLoading, setIsDbLoading] = useState(false);
   const { toast } = useToast();
 
+  // Clear DB data on logout
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setDbTransactions([]);
+    }
+  }, [isAuthenticated]);
+
   // Fetch from DB
   const fetchTransactions = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsDbLoading(true);
     try {
-      const res = await fetch('/api/lancamentos');
+      const res = await fetch('/api/lancamentos', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setDbTransactions(data);

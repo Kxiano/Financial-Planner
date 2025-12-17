@@ -19,6 +19,7 @@ import { usePathname } from "next/navigation"
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { Toaster } from "@/components/ui/toaster"
 import { GuestWarning } from "./GuestWarning"
+import { WelcomeModal } from "./WelcomeModal"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -64,6 +65,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 overflow-auto">
+             <WelcomeModal />
              <GuestWarning />
              {children}
         </main>

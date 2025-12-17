@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
             const data = await response.json();
             // User is authenticated with Auth0
+            localStorage.removeItem(GUEST_USER_KEY); // Clear guest data if exists
             setUser({
               id: data.sub,
               auth0Id: data.sub,
@@ -76,13 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    if (user?.isGuest) {
-      // Clear guest user
-      localStorage.removeItem(GUEST_USER_KEY);
-      setUser(null);
-    } else {
-      // Redirect to Auth0 logout
-      window.location.href = '/api/auth/logout';
+    // Clear all app state
+    localStorage.removeItem(GUEST_USER_KEY);
+    localStorage.removeItem('lancamentos'); // Clear local transactions
+    setUser(null);
+
+    if (!user?.isGuest) {
+      // Redirect to Auth0 logout if it was a real user
+      window.location.href = '/api/auth/logout?returnTo=' + encodeURIComponent(window.location.origin);
     }
   };
 

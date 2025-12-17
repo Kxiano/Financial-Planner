@@ -15,15 +15,17 @@ import {
   BarChart3,
   Calendar,
 } from 'lucide-react';
-import { useLocalStorage } from '@/lib/hooks/useLocalStorage';
-import { Lancamento } from '@/lib/types';
+// import { useLocalStorage } from '@/lib/hooks/useLocalStorage'; // Removed
+import { useTransactions } from '@/lib/contexts/TransactionContext'; // Added
+// import { Lancamento } from '@/lib/types';
 import { calcularMetricasDashboard, calcularHistoricoMensal, calcularTendencia } from '@/lib/utils/processLancamentos';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 import { useCurrencyStore } from '@/lib/store/currencyStore';
 import { useMemo } from 'react';
 
 export default function DashboardPage() {
-  const [lancamentos, , isLoaded] = useLocalStorage<Lancamento[]>('lancamentos', []);
+  const { transactions: lancamentos, isLoading } = useTransactions();
+  const isLoaded = !isLoading;
   const { t, language } = useLanguage();
   const { currency, formatValue, convertValue } = useCurrencyStore();
 

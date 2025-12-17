@@ -32,19 +32,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await fetch('/api/auth/me');
       
       if (response.ok) {
-        const data = await response.json();
-        // User is authenticated with Auth0
-        setUser({
-          id: data.sub,
-          auth0Id: data.sub,
-          email: data.email,
-          name: data.name,
-          picture: data.picture,
-          isGuest: false,
-          currency: data.currency || 'BRL',
-        });
-        setLoading(false);
-        return;
+        if (response.status === 204) {
+             // No content, not authenticated
+        } else {
+            const data = await response.json();
+            // User is authenticated with Auth0
+            localStorage.removeItem(GUEST_USER_KEY); // Clear guest data if exists
+            setUser({
+              id: data.sub,
+              auth0Id: data.sub,
+              email: data.email,
+              name: data.name,
+              picture: data.picture,
+              isGuest: false,
+              currency: data.currency || 'BRL',
+            });
+            setLoading(false);
+            return;
+        }
       }
 
       // Check for guest user in localStorage
@@ -72,13 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    if (user?.isGuest) {
-      // Clear guest user
-      localStorage.removeItem(GUEST_USER_KEY);
-      setUser(null);
-    } else {
-      // Redirect to Auth0 logout
-      window.location.href = '/api/auth/logout';
+    // Clear all app state
+    localStorage.removeItem(GUEST_USER_KEY);
+    localStorage.removeItem('lancamentos'); // Clear local transactions
+    setUser(null);
+
+    if (!user?.isGuest) {
+      // Redirect to Auth0 logout if it was a real user
+      window.location.href = '/api/auth/logout?returnTo=' + encodeURIComponent(window.location.origin);
     }
   };
 

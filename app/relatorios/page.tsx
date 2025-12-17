@@ -12,18 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useLocalStorage } from '@/lib/hooks/useLocalStorage';
-import { Lancamento } from '@/lib/types';
 import { PeriodFilter } from '@/components/relatorios/PeriodFilter';
 import { ExportCSV } from '@/components/relatorios/ExportCSV';
 import { filterByPeriod } from '@/lib/utils/filterLancamentos';
 import { ArrowUpCircle, ArrowDownCircle, TrendingUp, TrendingDown } from 'lucide-react';
 import { useLanguage } from '@/lib/hooks/useLanguage';
-
 import { useCurrencyStore } from '@/lib/store/currencyStore';
+import { useTransactions } from '@/lib/contexts/TransactionContext';
 
 export default function RelatoriosPage() {
-  const [lancamentos, , isLoaded] = useLocalStorage<Lancamento[]>('lancamentos', []);
+  const { transactions: lancamentos, isLoading } = useTransactions();
+  const isLoaded = !isLoading;
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [customMonth, setCustomMonth] = useState(new Date().toISOString().slice(0, 7));
   const { t, language } = useLanguage();

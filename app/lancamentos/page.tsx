@@ -18,41 +18,33 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useLocalStorage } from '@/lib/hooks/useLocalStorage';
+// import { useLocalStorage } from '@/lib/hooks/useLocalStorage'; // Removed
+import { useTransactions } from '@/lib/contexts/TransactionContext'; // Added
 import { Lancamento } from '@/lib/types';
 import { Trash2, ArrowUpCircle, ArrowDownCircle, Pencil } from 'lucide-react';
 import { useLanguage } from '@/lib/hooks/useLanguage';
 
 export default function LancamentosPage() {
-  const [lancamentos, setLancamentos, isLoaded] = useLocalStorage<Lancamento[]>(
-    'lancamentos',
-    []
-  );
+  const { transactions: lancamentos, addTransaction, updateTransaction, deleteTransaction, isLoading } = useTransactions();
+  const isLoaded = !isLoading;
   const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
   const { t, language } = useLanguage();
 
   const { currency, convertValue, formatValue } = useCurrencyStore();
 
-  const handleAddLancamento = (novoLancamento: Omit<Lancamento, 'id'>) => {
-    const lancamentoComId: Lancamento = {
-      ...novoLancamento,
-      id: Date.now().toString(),
-    };
-    setLancamentos([...lancamentos, lancamentoComId]);
+  const handleAddLancamento = async (novoLancamento: Omit<Lancamento, 'id'>) => {
+    await addTransaction(novoLancamento);
   };
 
-  const handleEditLancamento = (lancamentoAtualizado: Lancamento) => {
-    setLancamentos(
-      lancamentos.map((l) =>
-        l.id === lancamentoAtualizado.id ? lancamentoAtualizado : l
-      )
-    );
+  const handleEditLancamento = async (lancamentoAtualizado: Lancamento) => {
+    const { id, ...data } = lancamentoAtualizado;
+    await updateTransaction(id, data);
     setEditingLancamento(null);
   };
 
-  const handleDeleteLancamento = (id: string) => {
+  const handleDeleteLancamento = async (id: string) => {
     if (confirm(t('temCertezaExcluir'))) {
-      setLancamentos(lancamentos.filter((l) => l.id !== id));
+      await deleteTransaction(id);
     }
   };
 

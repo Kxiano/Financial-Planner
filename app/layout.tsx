@@ -6,6 +6,7 @@ import './globals.css';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/lib/contexts/AuthContext';
+import { TransactionProvider } from '@/lib/contexts/TransactionContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,7 +30,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
+            <TransactionProvider>
               <DashboardLayout>{children}</DashboardLayout>
+            </TransactionProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

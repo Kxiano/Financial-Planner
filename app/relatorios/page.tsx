@@ -1,237 +1,173 @@
-// app/relatorios/page.tsx
-
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { PeriodFilter } from '@/components/relatorios/PeriodFilter';
-import { ExportCSV } from '@/components/relatorios/ExportCSV';
-import { filterByPeriod } from '@/lib/utils/filterLancamentos';
-import { ArrowUpCircle, ArrowDownCircle, TrendingUp, TrendingDown } from 'lucide-react';
-import { useLanguage } from '@/lib/hooks/useLanguage';
-import { useCurrencyStore } from '@/lib/store/currencyStore';
+import { useMemo, useState } from 'react';
+import { Download } from 'lucide-react';
+import { CashFlowChart } from '@/components/charts/cash-flow-chart';
+import { CategoryBars } from '@/components/charts/category-bars';
+import { ChartLegend, SERIES } from '@/components/charts/chart-kit';
+import { TransactionsTable } from '@/components/transactions/transactions-table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { EmptyState, Page, PageHeader, PageLoading, Panel, PanelHeader } from '@/components/ui/panel';
+import { Segmented } from '@/components/ui/segmented';
 import { useTransactions } from '@/lib/contexts/TransactionContext';
+import { currentMonth, formatMonth } from '@/lib/finance/categories';
+import { useMoney } from '@/lib/hooks/useMoney';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import type { TranslationKey } from '@/lib/i18n/translations';
+import { downloadCSV } from '@/lib/utils/exportCSV';
+import { filterByPeriod, type Period } from '@/lib/utils/filterLancamentos';
+import { calcularHistoricoMensal, calcularSaidasPorCategoria, calcularTotais } from '@/lib/utils/processLancamentos';
+import { cn } from '@/lib/utils';
+
+const PERIODS: { value: Period; label: TranslationKey }[] = [
+  { value: 'all', label: 'todos' },
+  { value: 'current', label: 'mesAtual' },
+  { value: 'last', label: 'mesPassado' },
+  { value: 'last3', label: 'ultimos3Meses' },
+  { value: 'last6', label: 'ultimos6Meses' },
+  { value: 'year', label: 'esteAno' },
+  { value: 'custom', label: 'mesEspecifico' },
+];
 
 export default function RelatoriosPage() {
-  const { transactions: lancamentos, isLoading } = useTransactions();
-  const isLoaded = !isLoading;
-  const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const [customMonth, setCustomMonth] = useState(new Date().toISOString().slice(0, 7));
-  const { t, language } = useLanguage();
+  const { transactions, isLoading } = useTransactions();
+  const { t, locale } = useLanguage();
+  const { convertAll, format, currency } = useMoney();
+  const [period, setPeriod] = useState<Period>('last6');
+  const [customMonth, setCustomMonth] = useState(currentMonth());
 
-  const { currency, convertValue, formatValue } = useCurrencyStore();
-
-  const lancamentosConvertidos = useMemo(() => {
-    return lancamentos.map((l) => ({
-      ...l,
-      valor: convertValue(l.valor, l.currency || 'BRL'),
-    }));
-  }, [lancamentos, convertValue]);
-
-  const lancamentosFiltrados = useMemo(() => {
-    return filterByPeriod(lancamentosConvertidos, selectedPeriod, customMonth);
-  }, [lancamentosConvertidos, selectedPeriod, customMonth]);
-
-  const totais = useMemo(() => {
-    const totalEntradas = lancamentosFiltrados
-      .filter(l => l.tipo === 'entrada')
-      .reduce((sum, l) => sum + l.valor, 0);
-
-    const totalSaidas = lancamentosFiltrados
-      .filter(l => l.tipo === 'saida')
-      .reduce((sum, l) => sum + l.valor, 0);
-
-    const saldo = totalEntradas - totalSaidas;
-
-    return {
-      totalEntradas,
-      totalSaidas,
-      saldo,
-    };
-  }, [lancamentosFiltrados]);
-
-  // Use the store's formatValue instead of local formatCurrency function
-  const formatCurrency = (value: number) => {
-    return formatValue(value, currency);
-  };
-
-  const formatDate = (dateString: string) => {
-    const [year, month] = dateString.split('-');
-    return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString(language, {
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  const getCategoriaLabel = (categoria: string) => {
-    const labels: Record<string, string> = {
-      income: t('receitaSalario'),
-      gasto_fixo: t('gastoFixo'),
-      gasto_variavel: t('gastoVariavel'),
-      investimento: t('investimento'),
-      fundo_emergencia: t('fundoEmergenciaCategoria'),
-      divida: t('pagamentoDivida'),
-    };
-    return labels[categoria] || categoria;
-  };
-
-  if (!isLoaded) {
-    return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6">
-        <p>{t('carregando')}</p>
-      </div>
+  const report = useMemo(() => {
+    const lancamentos = filterByPeriod(convertAll(transactions), period, customMonth).sort((a, b) =>
+      b.data.localeCompare(a.data),
     );
-  }
+    return {
+      lancamentos,
+      totais: calcularTotais(lancamentos),
+      historico: calcularHistoricoMensal(lancamentos),
+      saidasPorCategoria: calcularSaidasPorCategoria(lancamentos),
+      entradas: lancamentos.filter((l) => l.tipo === 'entrada').length,
+    };
+  }, [transactions, convertAll, period, customMonth]);
+
+  if (isLoading) return <PageLoading label={t('carregando')} />;
+
+  const { lancamentos, totais } = report;
+  const formatAxis = (value: number) => format(value, { compact: true });
+
+  const exportReport = () =>
+    downloadCSV(
+      `planner-${period === 'custom' ? customMonth : period}.csv`,
+      [t('data'), t('tipo'), t('categoria'), t('descricao'), t('valor'), t('moeda')],
+      lancamentos.map((l) => [l.data, l.tipo, l.categoria, l.descricao, l.valor.toFixed(2), currency]),
+    );
+
+  const summary = [
+    { label: t('totalEntradas'), value: `+${format(totais.totalEntradas)}`, note: `${report.entradas} ${t('lancamentosText')}`, tone: 'text-positive' },
+    {
+      label: t('totalSaidas'),
+      value: `−${format(totais.totalSaidas)}`,
+      note: `${lancamentos.length - report.entradas} ${t('lancamentosText')}`,
+    },
+    {
+      label: t('saldo'),
+      value: format(totais.saldo, { signed: true }),
+      note: t('diferencaEntradasSaidas'),
+      tone: totais.saldo < 0 ? 'text-negative' : undefined,
+    },
+  ];
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t('relatorios')}</h2>
-        <ExportCSV data={lancamentosFiltrados} fileName={`relatorio-${selectedPeriod}.csv`} />
+    <Page>
+      <PageHeader
+        title={t('relatorios')}
+        description={t('selecionePeriodo')}
+        action={
+          <Button onClick={exportReport} disabled={lancamentos.length === 0}>
+            <Download />
+            {t('exportarCSV')}
+          </Button>
+        }
+      />
+
+      <div className="flex flex-wrap items-end gap-4">
+        <Segmented
+          label={t('periodo')}
+          value={period}
+          onChange={setPeriod}
+          options={PERIODS.map((p) => ({ value: p.value, label: t(p.label) }))}
+        />
+        {period === 'custom' && (
+          <div className="grid gap-1.5">
+            <Label htmlFor="custom-month" className="text-[13px] text-muted-foreground">
+              {t('selecioneMes')}
+            </Label>
+            <Input
+              id="custom-month"
+              type="month"
+              value={customMonth}
+              onChange={(e) => setCustomMonth(e.target.value)}
+              className="h-10 w-48"
+            />
+          </div>
+        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('periodo')}</CardTitle>
-          <CardDescription>{t('selecionePeriodo')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PeriodFilter 
-            selectedPeriod={selectedPeriod} 
-            onPeriodChange={setSelectedPeriod}
-            customMonth={customMonth}
-            onCustomMonthChange={setCustomMonth}
-          />
-        </CardContent>
-      </Card>
-
-      {lancamentosFiltrados.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-10 text-muted-foreground">
-              <p>{t('nenhumLancamentoPeriodo')}</p>
-            </div>
-          </CardContent>
-        </Card>
+      {lancamentos.length === 0 ? (
+        <EmptyState title={t('nenhumLancamentoPeriodo')} />
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('totalEntradas')}</CardTitle>
-                <ArrowUpCircle className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(totais.totalEntradas)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {lancamentosFiltrados.filter(l => l.tipo === 'entrada').length} {t('lancamentosText')}
-                </p>
-              </CardContent>
-            </Card>
+          <Panel className="grid gap-6 sm:grid-cols-3 sm:gap-0 sm:divide-x">
+            {summary.map((item) => (
+              <div key={item.label} className="grid gap-2 sm:px-6 sm:first:pl-0 sm:last:pr-0">
+                <h2 className="text-[13px] font-medium text-muted-foreground">{item.label}</h2>
+                <p className={cn('num text-2xl font-medium md:text-3xl', item.tone)}>{item.value}</p>
+                <p className="text-[13px] text-muted-foreground">{item.note}</p>
+              </div>
+            ))}
+          </Panel>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('totalSaidas')}</CardTitle>
-                <ArrowDownCircle className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                  {formatCurrency(totais.totalSaidas)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {lancamentosFiltrados.filter(l => l.tipo === 'saida').length} {t('lancamentosText')}
-                </p>
-              </CardContent>
-            </Card>
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Panel className="lg:col-span-2">
+              <PanelHeader
+                title={t('fluxoCaixa')}
+                description={t('fluxoCaixaDesc')}
+                action={
+                  <ChartLegend
+                    items={[
+                      { label: t('income'), color: SERIES[0] },
+                      { label: t('gastos'), color: SERIES[1] },
+                    ]}
+                  />
+                }
+              />
+              <CashFlowChart
+                data={report.historico.map((item) => ({
+                  name: formatMonth(item.mes, locale, 'short'),
+                  income: item.income,
+                  gastos: item.gastos,
+                }))}
+                labels={{ income: t('income'), gastos: t('gastos') }}
+                format={format}
+                formatAxis={formatAxis}
+              />
+            </Panel>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('saldo')}</CardTitle>
-                {totais.saldo >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-600" />
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${totais.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(totais.saldo)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t('diferencaEntradasSaidas')}
-                </p>
-              </CardContent>
-            </Card>
+            <Panel>
+              <PanelHeader title={t('porCategoria')} />
+              <CategoryBars data={report.saidasPorCategoria} format={(value) => format(value, { whole: true })} />
+            </Panel>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('todosLancamentos')}</CardTitle>
-              <CardDescription>
-                {lancamentosFiltrados.length} {t('lancamentosText')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-auto max-h-[500px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('data')}</TableHead>
-                      <TableHead>{t('tipo')}</TableHead>
-                      <TableHead>{t('categoria')}</TableHead>
-                      <TableHead>{t('descricao')}</TableHead>
-                      <TableHead className="text-right">{t('valor')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lancamentosFiltrados
-                      .sort((a, b) => b.data.localeCompare(a.data))
-                      .map((lancamento) => (
-                        <TableRow key={lancamento.id}>
-                          <TableCell className="font-medium">
-                            {formatDate(lancamento.data)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {lancamento.tipo === 'entrada' ? (
-                                <ArrowUpCircle className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <ArrowDownCircle className="h-4 w-4 text-red-600" />
-                              )}
-                              <span className="capitalize">
-                                {lancamento.tipo === 'entrada' ? t('entrada') : t('saida')}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{getCategoriaLabel(lancamento.categoria)}</TableCell>
-                          <TableCell>{lancamento.descricao}</TableCell>
-                          <TableCell
-                            className={`text-right font-semibold ${
-                              lancamento.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'
-                            }`}
-                          >
-                            {lancamento.tipo === 'entrada' ? '+' : '-'}
-                            {formatCurrency(lancamento.valor)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <Panel>
+            <PanelHeader title={t('todosLancamentos')} description={`${lancamentos.length} ${t('lancamentosText')}`} />
+            <div className="max-h-[520px] overflow-auto">
+              <TransactionsTable lancamentos={lancamentos} format={format} />
+            </div>
+          </Panel>
         </>
       )}
-    </div>
+    </Page>
   );
 }

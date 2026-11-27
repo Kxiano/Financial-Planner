@@ -1,228 +1,222 @@
-// app/dashboard/page.tsx
-
 'use client';
 
-import { MetricCard } from '@/components/metrics/MetricCard';
-import { LineChartComponent } from '@/components/charts/LineChartComponent';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  TrendingUp,
-  Wallet,
-  PiggyBank,
-  CreditCard,
-  DollarSign,
-  ShoppingCart,
-  BarChart3,
-  Calendar,
-} from 'lucide-react';
-// import { useLocalStorage } from '@/lib/hooks/useLocalStorage'; // Removed
-import { useTransactions } from '@/lib/contexts/TransactionContext'; // Added
-// import { Lancamento } from '@/lib/types';
-import { calcularMetricasDashboard, calcularHistoricoMensal, calcularTendencia } from '@/lib/utils/processLancamentos';
-import { useLanguage } from '@/lib/hooks/useLanguage';
-import { useCurrencyStore } from '@/lib/store/currencyStore';
 import { useMemo } from 'react';
+import Link from 'next/link';
+import { ArrowDownRight, ArrowRight, ArrowUpRight } from 'lucide-react';
+import { NetWorthChart } from '@/components/charts/area-charts';
+import { CashFlowChart } from '@/components/charts/cash-flow-chart';
+import { CategoryBars } from '@/components/charts/category-bars';
+import { ChartLegend, SERIES } from '@/components/charts/chart-kit';
+import { AddTransactionButton } from '@/components/transactions/transaction-dialog';
+import { TransactionsTable } from '@/components/transactions/transactions-table';
+import { EmptyState, Page, PageHeader, PageLoading, Panel, PanelHeader } from '@/components/ui/panel';
+import { useTransactions } from '@/lib/contexts/TransactionContext';
+import { formatMonth } from '@/lib/finance/categories';
+import { useMoney } from '@/lib/hooks/useMoney';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import {
+  calcularHistoricoMensal,
+  calcularMetricasDashboard,
+  calcularSaidasPorCategoria,
+  calcularTendencia,
+  ultimoMesComDados,
+} from '@/lib/utils/processLancamentos';
+import { cn } from '@/lib/utils';
+
+const HISTORY_MONTHS = 12;
+const CASH_FLOW_MONTHS = 6;
+const RECENT_ROWS = 6;
+
+function Trend({ trend, label }: { trend: { value: number; isPositive: boolean }; label: string }) {
+  const Icon = trend.isPositive ? ArrowUpRight : ArrowDownRight;
+  return (
+    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+      <span className={cn('num flex items-center gap-0.5 font-medium', trend.isPositive ? 'text-positive' : 'text-negative')}>
+        <Icon className="size-4" aria-hidden="true" />
+        {trend.isPositive ? '+' : '−'}
+        {trend.value}%
+      </span>
+      {label}
+    </p>
+  );
+}
+
+function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <Panel className="grid content-start gap-2">
+      <h2 className="text-[13px] font-medium text-muted-foreground">{label}</h2>
+      <p className="num text-2xl font-medium">{value}</p>
+      {note && <p className="text-[13px] text-muted-foreground">{note}</p>}
+    </Panel>
+  );
+}
 
 export default function DashboardPage() {
-  const { transactions: lancamentos, isLoading } = useTransactions();
-  const isLoaded = !isLoading;
-  const { t, language } = useLanguage();
-  const { currency, formatValue, convertValue } = useCurrencyStore();
+  const { transactions, isLoading } = useTransactions();
+  const { t, locale } = useLanguage();
+  const { convertAll, format } = useMoney();
 
-  const lancamentosConvertidos = useMemo(() => {
-    return lancamentos.map(l => ({
-      ...l,
-      valor: convertValue(l.valor, l.currency || 'BRL') // Default to BRL for legacy data
-    }));
-  }, [lancamentos, convertValue]);
+  const view = useMemo(() => {
+    const lancamentos = convertAll(transactions);
+    const mes = ultimoMesComDados(lancamentos);
+    const doMes = lancamentos.filter((l) => l.data === mes);
+    const historico = calcularHistoricoMensal(lancamentos);
+    const [anterior, atual] = historico.slice(-2);
 
-  if (!isLoaded) {
+    return {
+      mes,
+      metricas: calcularMetricasDashboard(lancamentos),
+      historico: historico.slice(-HISTORY_MONTHS),
+      tendenciaPatrimonio: atual && anterior ? calcularTendencia(atual.patrimonio, anterior.patrimonio) : null,
+      saidasPorCategoria: calcularSaidasPorCategoria(doMes),
+      reservadoNoMes: doMes
+        .filter((l) => l.tipo === 'saida' && (l.categoria === 'investimento' || l.categoria === 'fundo_emergencia'))
+        .reduce((total, l) => total + l.valor, 0),
+      recentes: [...lancamentos]
+        .sort((a, b) => b.data.localeCompare(a.data) || (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+        .slice(0, RECENT_ROWS),
+    };
+  }, [transactions, convertAll]);
+
+  if (isLoading) return <PageLoading label={t('carregando')} />;
+
+  const { metricas } = view;
+  const header = (
+    <PageHeader
+      title={t('visaoGeral')}
+      description={view.mes ? formatMonth(view.mes, locale) : undefined}
+      action={<AddTransactionButton />}
+    />
+  );
+
+  if (transactions.length === 0) {
     return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6">
-        <p>{t('carregando')}</p>
-      </div>
+      <Page>
+        {header}
+        <EmptyState title={t('nenhumDadoDisponivel')} description={t('comecaAdicionandoLancamentos')} />
+      </Page>
     );
   }
 
-  const data = calcularMetricasDashboard(lancamentosConvertidos);
-  const historicoMensal = calcularHistoricoMensal(lancamentosConvertidos);
+  const formatAxis = (value: number) => format(value, { compact: true });
+  const percent = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 });
+  const shareOfIncome = (value: number) =>
+    metricas.incomeTotal > 0 ? `${percent.format(value / metricas.incomeTotal)} ${t('daRenda')}` : undefined;
+  const mesesCobertura =
+    metricas.gastosFixos > 0
+      ? new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(metricas.fundoEmergencia / metricas.gastosFixos)
+      : '0';
 
-  // Helper function to format currency using store
-  const formatValueFn = (value: number) => {
-    return formatValue(value, currency);
-  };
+  const monthRows = [
+    { label: t('incomeMensal'), value: metricas.incomeTotal, tipo: 'entrada' as const },
+    { label: t('gastosFixos'), value: metricas.gastosFixos, note: shareOfIncome(metricas.gastosFixos) },
+    { label: t('gastosVariaveis'), value: metricas.gastosVariaveis, note: shareOfIncome(metricas.gastosVariaveis) },
+    { label: t('investidoNoMes'), value: view.reservadoNoMes, note: shareOfIncome(view.reservadoNoMes) },
+  ];
 
-  const ultimosMeses = historicoMensal.slice(-2);
-  const mesAtual = ultimosMeses[1] || ultimosMeses[0];
-  const mesAnterior = ultimosMeses[0];
-
-  const tendenciaPatrimonio = mesAtual && mesAnterior 
-    ? calcularTendencia(mesAtual.patrimonio, mesAnterior.patrimonio)
-    : { value: 0, isPositive: true };
-
-  const tendenciaIncome = mesAtual && mesAnterior
-    ? calcularTendencia(mesAtual.income, mesAnterior.income)
-    : { value: 0, isPositive: true };
-
-  const tendenciaRendimentos = mesAtual && mesAnterior
-    ? calcularTendencia(mesAtual.rendimentos, mesAnterior.rendimentos)
-    : { value: 0, isPositive: true };
-
-  const ultimosSeisMeses = historicoMensal.slice(-6);
-
-const incomeChartData = ultimosSeisMeses.map((item) => ({
-  name: new Date(item.mes + '-01').toLocaleDateString(language, {
-    month: 'short',
-    year: '2-digit',
-  }),
-  income: item.income,
-  gastos: item.gastos,
-}));
-
-const rendimentosChartData = ultimosSeisMeses.map((item) => ({
-  name: new Date(item.mes + '-01').toLocaleDateString(language, {
-    month: 'short',
-    year: '2-digit',
-  }),
-  rendimentos: item.rendimentos,
-  investimentos: item.investimentos,
-  // We should also convert these? They are already converted via historicoMensal calculated from lancamentosConvertidos
-}));
-
-  const mesesCobertura = data.gastosFixos > 0 
-    ? (data.fundoEmergencia / data.gastosFixos).toFixed(1)
-    : '0';
+  const chartName = (mes: string) => formatMonth(mes, locale, 'short');
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t('dashboard')}</h2>
-        <div className="hidden md:flex items-center space-x-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString(language, { month: 'long', year: 'numeric' })}
-          </span>
+    <Page>
+      {header}
 
-        </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Panel className="lg:col-span-2">
+          <div className="mb-5 grid gap-2">
+            <h2 className="text-[13px] font-medium text-muted-foreground">{t('patrimonioTotal')}</h2>
+            <p className="num text-4xl font-medium tracking-tight md:text-5xl">{format(metricas.patrimonioTotal)}</p>
+            {view.tendenciaPatrimonio && <Trend trend={view.tendenciaPatrimonio} label={t('vsMesAnterior')} />}
+          </div>
+          <NetWorthChart
+            data={view.historico.map((item) => ({ name: chartName(item.mes), patrimonio: item.patrimonio }))}
+            label={t('patrimonioTotal')}
+            format={format}
+            formatAxis={formatAxis}
+          />
+        </Panel>
+
+        <Panel className="flex flex-col">
+          <PanelHeader title={t('esteMes')} />
+          <dl className="grid flex-1 content-start">
+            {monthRows.map((row) => (
+              <div key={row.label} className="flex items-baseline justify-between gap-4 border-b py-3 first:pt-0">
+                <dt className="text-sm">
+                  {row.label}
+                  {row.note && <span className="block text-[13px] text-muted-foreground">{row.note}</span>}
+                </dt>
+                <dd className={cn('num font-medium', row.tipo === 'entrada' && 'text-positive')}>
+                  {row.tipo === 'entrada' ? '+' : '−'}
+                  {format(row.value)}
+                </dd>
+              </div>
+            ))}
+            <div className="flex items-baseline justify-between gap-4 pt-4">
+              <dt className="text-sm font-medium">{t('sobraMensal')}</dt>
+              <dd className={cn('num text-2xl font-medium', metricas.sobraMensal < 0 && 'text-negative')}>
+                {format(metricas.sobraMensal)}
+              </dd>
+            </div>
+          </dl>
+        </Panel>
       </div>
 
-      {lancamentos.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-10 text-muted-foreground">
-              <p className="text-lg font-semibold mb-2">{t('nenhumDadoDisponivel')}</p>
-              <p>{t('comecaAdicionandoLancamentos')}</p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard
-              title={t('patrimonioTotal')}
-              value={data.patrimonioTotal}
-              icon={Wallet}
-              formatter={formatValueFn}
-              trend={tendenciaPatrimonio}
-              trendLabel={t('vsMesAnterior')}
-            />
-            <MetricCard
-              title={t('sobraMensal')}
-              value={data.sobraMensal}
-              icon={TrendingUp}
-              formatter={formatValueFn}
-              trend={data.sobraMensal >= 0 ? { value: 0, isPositive: true } : { value: 0, isPositive: false }}
-              trendLabel={t('vsMesAnterior')}
-            />
-            <MetricCard
-              title={t('fundoEmergencia')}
-              value={data.fundoEmergencia}
-              icon={PiggyBank}
-              formatter={formatValueFn}
-              description={`${mesesCobertura} ${t('mesesCobertura')}`}
-            />
-            <MetricCard
-              title={t('dividas')}
-              value={data.dividas}
-              icon={CreditCard}
-              formatter={formatValueFn}
-            />
-          </div>
+      <div className="grid gap-6 sm:grid-cols-3">
+        <Stat
+          label={t('fundoEmergencia')}
+          value={format(metricas.fundoEmergencia)}
+          note={`${mesesCobertura} ${t('mesesCobertura')}`}
+        />
+        <Stat label={t('rendimentos')} value={format(metricas.rendimentos)} note={t('esteMes')} />
+        <Stat label={t('dividas')} value={format(metricas.dividas)} />
+      </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard
-              title={t('incomeMensal')}
-              value={data.incomeTotal}
-              icon={DollarSign}
-              formatter={formatValueFn}
-              trend={tendenciaIncome}
-              trendLabel={t('vsMesAnterior')}
-            />
-            <MetricCard
-              title={t('rendimentos')}
-              value={data.rendimentos}
-              icon={BarChart3}
-              formatter={formatValueFn}
-              trend={tendenciaRendimentos}
-              trendLabel={t('vsMesAnterior')}
-            />
-            <MetricCard
-              title={t('gastosFixos')}
-              value={data.gastosFixos}
-              icon={Calendar}
-              formatter={formatValueFn}
-            />
-            <MetricCard
-              title={t('gastosVariaveis')}
-              value={data.gastosVariaveis}
-              icon={ShoppingCart}
-              formatter={formatValueFn}
-            />
-          </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Panel className="lg:col-span-2">
+          <PanelHeader
+            title={t('fluxoCaixa')}
+            description={t('fluxoCaixaDesc')}
+            action={
+              <ChartLegend
+                items={[
+                  { label: t('income'), color: SERIES[0] },
+                  { label: t('gastos'), color: SERIES[1] },
+                ]}
+              />
+            }
+          />
+          <CashFlowChart
+            data={view.historico.slice(-CASH_FLOW_MONTHS).map((item) => ({
+              name: chartName(item.mes),
+              income: item.income,
+              gastos: item.gastos,
+            }))}
+            labels={{ income: t('income'), gastos: t('gastos') }}
+            format={format}
+            formatAxis={formatAxis}
+          />
+        </Panel>
 
-          {ultimosSeisMeses.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t('incomeVsGastos')}</CardTitle>
-                  <CardDescription>
-                    {t('evolucaoDosUltimos')} {ultimosSeisMeses.length} {t('meses')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <LineChartComponent
-                    data={incomeChartData}
-                    lines={[
-                      { dataKey: 'income', name: t('income'), color: '#10b981' },
-                      { dataKey: 'gastos', name: t('gastos'), color: '#ef4444' },
-                    ]}
-                    formatter={formatValueFn}
-                  />
-                </CardContent>
-              </Card>
+        <Panel>
+          <PanelHeader title={t('paraOndeFoi')} description={formatMonth(view.mes, locale)} />
+          <CategoryBars data={view.saidasPorCategoria} format={(value) => format(value, { whole: true })} />
+        </Panel>
+      </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t('investimentosVsRendimentos')}</CardTitle>
-                  <CardDescription>
-                    {t('performanceDosUltimos')} {ultimosSeisMeses.length} {t('meses')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <LineChartComponent
-                    data={rendimentosChartData}
-                    lines={[
-                      { dataKey: 'investimentos', name: t('investimentos'), color: '#3b82f6' },
-                      { dataKey: 'rendimentos', name: t('rendimentos'), color: '#8b5cf6' },
-                    ]}
-                    formatter={formatValueFn}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+      <Panel>
+        <PanelHeader
+          title={t('ultimosLancamentos')}
+          action={
+            <Link
+              href="/lancamentos"
+              className="group flex items-center gap-1 text-sm font-medium text-brand underline-offset-4 hover:underline"
+            >
+              {t('verTodos')}
+              <ArrowRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden="true" />
+            </Link>
+          }
+        />
+        <TransactionsTable lancamentos={view.recentes} format={format} />
+      </Panel>
+    </Page>
   );
 }

@@ -1,15 +1,18 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useLocalStorage } from '@/lib/hooks/useLocalStorage';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { Lancamento } from '@/lib/types';
-import { useToast } from '@/components/ui/use-toast';
+
+export type NovoLancamento = Omit<Lancamento, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 
 interface TransactionContextType {
   transactions: Lancamento[];
   isLoading: boolean;
-  addTransaction: (transaction: Omit<Lancamento, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addTransaction: (transaction: NovoLancamento) => Promise<void>;
   updateTransaction: (id: string, transaction: Partial<Lancamento>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   refreshTransactions: () => Promise<void>;
@@ -17,172 +20,150 @@ interface TransactionContextType {
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
+/**
+ * Guests keep their transactions in localStorage; signed-in users keep them
+ * in the database. On the first sign-in, anything logged as a guest is
+ * uploaded once and then cleared locally.
+ */
 export function TransactionProvider({ children }: { children: React.ReactNode }) {
-  const { user, loading: isAuthLoading, isAuthenticated, isGuest } = useAuth();
-  const [localTransactions, setLocalTransactions] = useLocalStorage<Lancamento[]>('lancamentos', []);
+  const { loading: isAuthLoading, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
+  const { toast } = useToast();
+  const [localTransactions, setLocalTransactions, isLocalLoaded] = useLocalStorage<Lancamento[]>('lancamentos', []);
   const [dbTransactions, setDbTransactions] = useState<Lancamento[]>([]);
   const [isDbLoading, setIsDbLoading] = useState(false);
-  const { toast } = useToast();
 
-  // Clear DB data on logout
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setDbTransactions([]);
-    }
-  }, [isAuthenticated]);
+  const notifyError = useCallback(
+    (description: string) => toast({ title: t('error'), description, variant: 'destructive' }),
+    [toast, t],
+  );
 
-  // Fetch from DB
   const fetchTransactions = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsDbLoading(true);
     try {
       const res = await fetch('/api/lancamentos', { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        setDbTransactions(data);
-      }
+      if (!res.ok) throw new Error(`GET /api/lancamentos ${res.status}`);
+      setDbTransactions(await res.json());
     } catch (error) {
       console.error('Failed to fetch transactions', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao carregar transações.",
-        variant: "destructive",
-      });
+      notifyError(t('erroAoCarregar'));
     } finally {
       setIsDbLoading(false);
     }
-  }, [isAuthenticated, toast]);
+  }, [isAuthenticated, notifyError, t]);
 
-  // Sync Logic
   useEffect(() => {
-    const syncData = async () => {
-      // Only sync if user is logged in (authenticated) and there is local data
-      if (isAuthenticated && localTransactions.length > 0) {
-        try {
-          toast({ title: "Sincronizando dados...", description: "Passando seus dados locais para a nuvem." });
-          
-          const res = await fetch('/api/user/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lancamentos: localTransactions }),
-          });
+    if (!isAuthenticated) setDbTransactions([]);
+  }, [isAuthenticated]);
 
-          if (res.ok) {
-            // Clear local storage after successful sync
-            setLocalTransactions([]);
-            await fetchTransactions(); // Refresh DB data
-            toast({ title: "Sucesso!", description: "Dados sincronizados com sucesso." });
-          } else {
-             console.error('Sync failed');
-             toast({ title: "Erro na sincronização", description: "Não foi possível salvar seus dados locais.", variant: "destructive" });
-          }
-        } catch (error) {
-          console.error('Sync error:', error);
-        }
-      } else if (isAuthenticated && localTransactions.length === 0) {
-         // Just fetch if no local data to sync
-         fetchTransactions();
+  // After sign-in: upload guest data if there is any, then load from the database.
+  useEffect(() => {
+    if (isAuthLoading || !isLocalLoaded || !isAuthenticated) return;
+
+    const sync = async () => {
+      if (localTransactions.length === 0) {
+        await fetchTransactions();
+        return;
+      }
+      toast({ title: t('syncingData'), description: t('syncingDescription') });
+      try {
+        const res = await fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lancamentos: localTransactions }),
+        });
+        if (!res.ok) throw new Error(`POST /api/user/sync ${res.status}`);
+        setLocalTransactions([]);
+        await fetchTransactions();
+        toast({ title: t('syncSuccess'), description: t('syncSuccessDescription') });
+      } catch (error) {
+        console.error('Sync error:', error);
+        toast({ title: t('syncError'), description: t('syncErrorDescription'), variant: 'destructive' });
       }
     };
 
-    if (!isAuthLoading) {
-      syncData();
-    }
+    sync();
+    // Runs once per sign-in; the local list is read at that moment on purpose.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, isAuthLoading]); // user -> isAuthenticated
+  }, [isAuthenticated, isAuthLoading, isLocalLoaded]);
 
-  // CRUD Operations
-  const addTransaction = async (data: Omit<Lancamento, 'id' | 'createdAt' | 'updatedAt'>) => {
+  /** Sends a change to the API, reloads on success and reports the outcome. */
+  const mutate = async (request: () => Promise<Response>, successMessage: string, failureMessage: string) => {
+    try {
+      const res = await request();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        notifyError(body.error || failureMessage);
+        return;
+      }
+      await fetchTransactions();
+      toast({ title: t('success'), description: successMessage });
+    } catch (error) {
+      console.error(error);
+      notifyError(t('networkError'));
+    }
+  };
+
+  const addTransaction = async (data: NovoLancamento) => {
     if (!isAuthenticated) {
-      const newTransaction: Lancamento = {
-        ...data,
-        id: crypto.randomUUID(),
-        userId: 'guest',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setLocalTransactions((prev) => [newTransaction, ...prev]);
-    } else {
-      try {
-        const res = await fetch('/api/lancamentos', {
+      const now = new Date().toISOString();
+      setLocalTransactions((prev) => [
+        { ...data, id: crypto.randomUUID(), userId: 'guest', createdAt: now, updatedAt: now },
+        ...prev,
+      ]);
+      return;
+    }
+    await mutate(
+      () =>
+        fetch('/api/lancamentos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
-        });
-        if (res.ok) {
-          await fetchTransactions();
-          toast({ title: "Sucesso", description: "Lançamento adicionado." });
-        } else {
-             const errorData = await res.json().catch(() => ({}));
-             toast({ 
-                 title: "Erro", 
-                 description: errorData.error || "Erro ao salvar lançamento.", 
-                 variant: "destructive" 
-             });
-        }
-      } catch (error) {
-        console.error(error);
-        toast({ title: "Erro", description: "Falha de rede ou servidor.", variant: "destructive" });
-      }
-    }
+        }),
+      t('transactionAdded'),
+      t('errorSaving'),
+    );
   };
 
   const updateTransaction = async (id: string, data: Partial<Lancamento>) => {
     if (!isAuthenticated) {
-      setLocalTransactions((prev) => prev.map(t => t.id === id ? { ...t, ...data } : t));
-    } else {
-      try {
-        const res = await fetch(`/api/lancamentos/${id}`, {
+      setLocalTransactions((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, ...data, updatedAt: new Date().toISOString() } : l)),
+      );
+      return;
+    }
+    await mutate(
+      () =>
+        fetch(`/api/lancamentos/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
-        });
-        if (res.ok) {
-          await fetchTransactions();
-          toast({ title: "Sucesso", description: "Lançamento atualizado." });
-        }
-      } catch (error) {
-          console.error(error);
-          toast({ title: "Erro", description: "Falha ao atualizar.", variant: "destructive" });
-      }
-    }
+        }),
+      t('transactionUpdated'),
+      t('errorUpdating'),
+    );
   };
 
   const deleteTransaction = async (id: string) => {
     if (!isAuthenticated) {
-      setLocalTransactions((prev) => prev.filter(t => t.id !== id));
-    } else {
-      try {
-        const res = await fetch(`/api/lancamentos/${id}`, {
-          method: 'DELETE',
-        });
-        if (res.ok) {
-           await fetchTransactions();
-           toast({ title: "Sucesso", description: "Lançamento removido." });
-        }
-      } catch (error) {
-         console.error(error);
-         toast({ title: "Erro", description: "Falha ao remover.", variant: "destructive" });
-      }
+      setLocalTransactions((prev) => prev.filter((l) => l.id !== id));
+      return;
     }
+    await mutate(() => fetch(`/api/lancamentos/${id}`, { method: 'DELETE' }), t('transactionDeleted'), t('errorDeleting'));
   };
 
   const refreshTransactions = async () => {
-    if (isAuthenticated) await fetchTransactions();
+    await fetchTransactions();
   };
 
-  const transactions = !isAuthenticated ? localTransactions : dbTransactions;
-  const isLoading = isAuthLoading || (isAuthenticated && isDbLoading);
+  const transactions = isAuthenticated ? dbTransactions : localTransactions;
+  const isLoading = isAuthLoading || !isLocalLoaded || (isAuthenticated && isDbLoading);
 
   return (
-    <TransactionContext.Provider value={{
-      transactions,
-      isLoading,
-      addTransaction,
-      updateTransaction,
-      deleteTransaction,
-      refreshTransactions
-    }}>
+    <TransactionContext.Provider
+      value={{ transactions, isLoading, addTransaction, updateTransaction, deleteTransaction, refreshTransactions }}
+    >
       {children}
     </TransactionContext.Provider>
   );

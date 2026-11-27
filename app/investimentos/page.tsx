@@ -1,295 +1,181 @@
-// app/investimentos/page.tsx
-
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
+import { GrowthChart } from '@/components/charts/area-charts';
+import { ChartLegend, SERIES } from '@/components/charts/chart-kit';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Page, PageHeader, Panel, PanelHeader } from '@/components/ui/panel';
+import { Segmented } from '@/components/ui/segmented';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { calcularInvestimento } from '@/lib/calculators/investimentos';
-import { EvolucaoMensal } from '@/lib/types';
-import { Calculator, TrendingUp } from 'lucide-react';
-import { useLanguage } from '@/lib/hooks/useLanguage';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useMoney } from '@/lib/hooks/useMoney';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import type { TranslationKey } from '@/lib/i18n/translations';
+
+type Field = 'valorInicial' | 'valorFuturo' | 'taxaAnual' | 'anos';
+type Granularity = 'anual' | 'mensal';
+
+const FIELDS: { name: Field; label: TranslationKey; step: string; money: boolean }[] = [
+  { name: 'valorInicial', label: 'valorInicial', step: '100', money: true },
+  { name: 'valorFuturo', label: 'valorFuturoDesejado', step: '1000', money: true },
+  { name: 'taxaAnual', label: 'taxaJurosAnual', step: '0.1', money: false },
+  { name: 'anos', label: 'periodoAnos', step: '1', money: false },
+];
+
+const MAX_YEARS = 60;
 
 export default function InvestimentosPage() {
   const { t } = useLanguage();
-  const [valorInicial, setValorInicial] = useState<string>('10000');
-  const [valorFuturo, setValorFuturo] = useState<string>('1000000');
-  const [taxaAnual, setTaxaAnual] = useState<string>('6');
-  const [anos, setAnos] = useState<string>('20');
-  
-  const [resultado, setResultado] = useState<{
-    pmt: number;
-    evolucao: EvolucaoMensal[];
-  } | null>(null);
+  const { format, currency } = useMoney();
+  const [values, setValues] = useState<Record<Field, string>>({
+    valorInicial: '10000',
+    valorFuturo: '1000000',
+    taxaAnual: '6',
+    anos: '20',
+  });
+  const [granularity, setGranularity] = useState<Granularity>('anual');
 
-  const handleCalcular = () => {
-    const params = {
-      valorInicial: parseFloat(valorInicial) || 0,
-      valorFuturo: parseFloat(valorFuturo) || 0,
-      taxaAnual: (parseFloat(taxaAnual) || 0) / 100,
-      anos: parseInt(anos) || 0,
-    };
+  // The plan recalculates as the numbers change; there is nothing to submit.
+  const plan = useMemo(() => {
+    const valorInicial = parseFloat(values.valorInicial) || 0;
+    const valorFuturo = parseFloat(values.valorFuturo) || 0;
+    const taxaAnual = (parseFloat(values.taxaAnual) || 0) / 100;
+    const anos = Math.min(Math.floor(parseFloat(values.anos) || 0), MAX_YEARS);
+    if (anos < 1 || taxaAnual <= 0 || valorFuturo <= valorInicial) return null;
 
-    const result = calcularInvestimento(params);
-    setResultado(result);
-  };
+    const { pmt, evolucao } = calcularInvestimento({ valorInicial, valorFuturo, taxaAnual, anos });
+    return { pmt, evolucao, anos, final: evolucao[evolucao.length - 1] };
+  }, [values]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  const formatWhole = (value: number) => format(value, { whole: true });
+  const formatAxis = (value: number) => format(value, { compact: true });
+  const yearly = plan?.evolucao.filter((item) => item.mes % 12 === 0) ?? [];
+  const tickStep = !plan || plan.anos <= 10 ? 1 : plan.anos <= 30 ? 5 : 10;
+  const rows = granularity === 'anual' ? yearly : (plan?.evolucao ?? []);
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-          {t('calculadoraPrimeiroMilhao')}
-        </h2>
-        <Calculator className="h-8 w-8 text-muted-foreground" />
-      </div>
+    <Page>
+      <PageHeader title={t('calculadoraPrimeiroMilhao')} description={t('preenchaParaCalcular')} />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Card de Inputs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('parametros')}</CardTitle>
-            <CardDescription>
-              {t('preenchaParaCalcular')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="valorInicial">{t('valorInicial')}</Label>
-              <Input
-                id="valorInicial"
-                type="number"
-                value={valorInicial}
-                onChange={(e) => setValorInicial(e.target.value)}
-                placeholder="10000"
-              />
-            </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Panel>
+          <PanelHeader title={t('parametros')} />
+          <div className="grid gap-4">
+            {FIELDS.map((field) => (
+              <div key={field.name} className="grid gap-2">
+                <Label htmlFor={field.name}>
+                  {t(field.label)}
+                  {field.money && <span className="num font-normal text-muted-foreground">{currency}</span>}
+                </Label>
+                <Input
+                  id={field.name}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step={field.step}
+                  value={values[field.name]}
+                  onChange={(e) => setValues((current) => ({ ...current, [field.name]: e.target.value }))}
+                  className="num h-10"
+                />
+              </div>
+            ))}
+          </div>
+        </Panel>
 
-            <div className="space-y-2">
-              <Label htmlFor="valorFuturo">{t('valorFuturoDesejado')}</Label>
-              <Input
-                id="valorFuturo"
-                type="number"
-                value={valorFuturo}
-                onChange={(e) => setValorFuturo(e.target.value)}
-                placeholder="1000000"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="taxaAnual">{t('taxaJurosAnual')}</Label>
-              <Input
-                id="taxaAnual"
-                type="number"
-                step="0.1"
-                value={taxaAnual}
-                onChange={(e) => setTaxaAnual(e.target.value)}
-                placeholder="6"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="anos">{t('periodoAnos')}</Label>
-              <Input
-                id="anos"
-                type="number"
-                value={anos}
-                onChange={(e) => setAnos(e.target.value)}
-                placeholder="20"
-              />
-            </div>
-
-            <Button onClick={handleCalcular} className="w-full">
-              <Calculator className="mr-2 h-4 w-4" />
-              {t('calcular')}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Card de Resultado */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('resultado')}</CardTitle>
-            <CardDescription>
-              {t('valorInvestirMensalmente')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {resultado ? (
-              <div className="space-y-4">
-                <div className="rounded-lg border p-4 bg-primary/5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        {t('investimentoMensal')}
-                      </p>
-                      <p className="text-3xl font-bold text-primary">
-                        {formatCurrency(resultado.pmt)}
-                      </p>
-                    </div>
-                    <TrendingUp className="h-8 w-8 text-primary" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('totalInvestido')}
-                    </p>
-                    <p className="text-lg font-semibold">
-                      {formatCurrency(
-                        resultado.evolucao[resultado.evolucao.length - 1]
-                          .totalInvestido
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('totalJuros')}
-                    </p>
-                    <p className="text-lg font-semibold text-green-600">
-                      {formatCurrency(
-                        resultado.evolucao[resultado.evolucao.length - 1]
-                          .totalJuros
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-sm text-muted-foreground">
-                  <p>
-                    💡 {t('investindo')} <strong>{formatCurrency(resultado.pmt)}</strong> {t('porMesDurante')}{' '}
-                    <strong>{anos} {t('anos')}</strong>, {t('voceAlcancara')}{' '}
-                    <strong>
-                      {formatCurrency(
-                        resultado.evolucao[resultado.evolucao.length - 1]
-                          .totalAcumulado
-                      )}
-                    </strong>
+        <Panel className="lg:col-span-2">
+          {plan ? (
+            <>
+              <div className="mb-6 grid gap-6 sm:grid-cols-[1.4fr_1fr_1fr]">
+                <div className="grid gap-2">
+                  <h2 className="text-[13px] font-medium text-muted-foreground">{t('investimentoMensal')}</h2>
+                  <p className="num text-4xl font-medium tracking-tight">{format(plan.pmt)}</p>
+                  <p className="text-[13px] text-muted-foreground">
+                    {t('porMesDurante')} {plan.anos} {t('anos')}
                   </p>
                 </div>
+                <div className="grid content-start gap-2">
+                  <h2 className="text-[13px] font-medium text-muted-foreground">{t('totalInvestido')}</h2>
+                  <p className="num text-xl font-medium">{formatWhole(plan.final.totalInvestido)}</p>
+                </div>
+                <div className="grid content-start gap-2">
+                  <h2 className="text-[13px] font-medium text-muted-foreground">{t('totalJuros')}</h2>
+                  <p className="num text-xl font-medium text-positive">+{formatWhole(plan.final.totalJuros)}</p>
+                </div>
               </div>
-            ) : (
-              <div className="flex items-center justify-center h-40 text-muted-foreground">
-                <p>{t('preenchaCliqueCalcular')}</p>
+              <div className="mb-3 flex justify-end">
+                <ChartLegend
+                  items={[
+                    { label: t('totalInvestido'), color: SERIES[0] },
+                    { label: t('juros'), color: SERIES[1] },
+                  ]}
+                />
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <GrowthChart
+                data={yearly.map((item) => ({
+                  name: String(item.mes / 12),
+                  investido: item.totalInvestido,
+                  juros: item.totalJuros,
+                }))}
+                ticks={yearly.filter((item) => (item.mes / 12) % tickStep === 0).map((item) => String(item.mes / 12))}
+                labels={{ investido: t('totalInvestido'), juros: t('juros'), total: t('totalAcumulado') }}
+                format={formatWhole}
+                formatAxis={formatAxis}
+              />
+            </>
+          ) : (
+            <p className="text-muted-foreground">{t('metaInvalida')}</p>
+          )}
+        </Panel>
       </div>
 
-            {/* Tabela de Evolução com Tabs */}
-      {resultado && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('evolucaoInvestimento')}</CardTitle>
-            <CardDescription>
-              {t('projecaoMesAMes')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="anual" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="anual">{t('evolucaoAnual')}</TabsTrigger>
-                <TabsTrigger value="mensal">{t('evolucaoMensal')}</TabsTrigger>
-              </TabsList>
-              
-              {/* Tab Anual */}
-              <TabsContent value="anual">
-                <div className="max-h-[500px] overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('mes')}</TableHead>
-                        <TableHead>{t('investimentoMensal')}</TableHead>
-                        <TableHead>{t('jurosMes')}</TableHead>
-                        <TableHead>{t('totalInvestido')}</TableHead>
-                        <TableHead>{t('totalJuros')}</TableHead>
-                        <TableHead className="text-right">{t('totalAcumulado')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {resultado.evolucao
-                        .filter((item, index) => {
-                          return (
-                            index === 0 ||
-                            index % 12 === 0 ||
-                            index === resultado.evolucao.length - 1
-                          );
-                        })
-                        .map((item) => (
-                          <TableRow key={item.mes}>
-                            <TableCell className="font-medium">{item.mes}</TableCell>
-                            <TableCell>{formatCurrency(item.investimentoMensal)}</TableCell>
-                            <TableCell>{formatCurrency(item.jurosMes)}</TableCell>
-                            <TableCell>{formatCurrency(item.totalInvestido)}</TableCell>
-                            <TableCell className="text-green-600">
-                              {formatCurrency(item.totalJuros)}
-                            </TableCell>
-                            <TableCell className="text-right font-bold">
-                              {formatCurrency(item.totalAcumulado)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              
-              {/* Tab Mensal */}
-              <TabsContent value="mensal">
-                <div className="max-h-[500px] overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('mes')}</TableHead>
-                        <TableHead>{t('investimentoMensal')}</TableHead>
-                        <TableHead>{t('jurosMes')}</TableHead>
-                        <TableHead>{t('totalInvestido')}</TableHead>
-                        <TableHead>{t('totalJuros')}</TableHead>
-                        <TableHead className="text-right">{t('totalAcumulado')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {resultado.evolucao.map((item) => (
-                        <TableRow key={item.mes}>
-                          <TableCell className="font-medium">{item.mes}</TableCell>
-                          <TableCell>{formatCurrency(item.investimentoMensal)}</TableCell>
-                          <TableCell>{formatCurrency(item.jurosMes)}</TableCell>
-                          <TableCell>{formatCurrency(item.totalInvestido)}</TableCell>
-                          <TableCell className="text-green-600">
-                            {formatCurrency(item.totalJuros)}
-                          </TableCell>
-                          <TableCell className="text-right font-bold">
-                            {formatCurrency(item.totalAcumulado)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+      {plan && (
+        <Panel>
+          <PanelHeader
+            title={t('evolucaoInvestimento')}
+            description={t('projecaoMesAMes')}
+            action={
+              <Segmented
+                label={t('evolucaoInvestimento')}
+                value={granularity}
+                onChange={setGranularity}
+                options={[
+                  { value: 'anual', label: t('ano') },
+                  { value: 'mensal', label: t('mes') },
+                ]}
+              />
+            }
+          />
+          <div className="max-h-[520px] overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{granularity === 'anual' ? t('ano') : t('mes')}</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">{t('jurosMes')}</TableHead>
+                  <TableHead className="text-right">{t('totalInvestido')}</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">{t('totalJuros')}</TableHead>
+                  <TableHead className="text-right">{t('totalAcumulado')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((item) => (
+                  <TableRow key={item.mes}>
+                    <TableCell className="num text-muted-foreground">
+                      {granularity === 'anual' ? item.mes / 12 : item.mes}
+                    </TableCell>
+                    <TableCell className="num hidden text-right sm:table-cell">{format(item.jurosMes)}</TableCell>
+                    <TableCell className="num text-right">{format(item.totalInvestido)}</TableCell>
+                    <TableCell className="num hidden text-right text-positive sm:table-cell">
+                      +{format(item.totalJuros)}
+                    </TableCell>
+                    <TableCell className="num text-right font-medium">{format(item.totalAcumulado)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Panel>
       )}
-    </div>
+    </Page>
   );
 }

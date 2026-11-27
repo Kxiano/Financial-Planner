@@ -1,151 +1,105 @@
-// lib/utils/processLancamentos.ts
+import type { Categoria } from '@/lib/finance/categories';
+import { DadosMensais, DashboardData, Lancamento } from '@/lib/types';
 
-import { Lancamento, DashboardData, DadosMensais } from '@/lib/types';
+type Filtro = (l: Lancamento) => boolean;
+
+const soma = (lancamentos: Lancamento[], filtro: Filtro) =>
+  lancamentos.reduce((total, l) => (filtro(l) ? total + l.valor : total), 0);
+
+const entrada = (categoria?: Categoria): Filtro => (l) =>
+  l.tipo === 'entrada' && (!categoria || l.categoria === categoria);
+
+const saida = (categoria?: Categoria): Filtro => (l) =>
+  l.tipo === 'saida' && (!categoria || l.categoria === categoria);
+
+/** Net worth = money invested + returns + emergency fund - debts. */
+function patrimonio(lancamentos: Lancamento[]) {
+  return (
+    soma(lancamentos, saida('investimento')) +
+    soma(lancamentos, entrada('investimento')) +
+    soma(lancamentos, saida('fundo_emergencia')) -
+    saldoDividas(lancamentos)
+  );
+}
+
+function saldoDividas(lancamentos: Lancamento[]) {
+  return Math.abs(soma(lancamentos, entrada('divida')) - soma(lancamentos, saida('divida')));
+}
+
+/** The most recent month that has any transaction, as "YYYY-MM". */
+export function ultimoMesComDados(lancamentos: Lancamento[]) {
+  return lancamentos.reduce((max, l) => (l.data > max ? l.data : max), lancamentos[0]?.data ?? '');
+}
 
 /**
- * Processa lançamentos e calcula métricas do dashboard
+ * Headline numbers for the dashboard. Monthly figures come from the most
+ * recent month with data; the emergency fund, debts and net worth are
+ * running totals over everything.
  */
 export function calcularMetricasDashboard(lancamentos: Lancamento[]): DashboardData {
-  // Pegar último mês com dados
-  const ultimoMes = lancamentos.length > 0 
-    ? lancamentos.reduce((max, l) => l.data > max ? l.data : max, lancamentos[0].data)
-    : new Date().toISOString().slice(0, 7);
-
-  // Filtrar lançamentos do último mês
-  const lancamentosUltimoMes = lancamentos.filter(l => l.data === ultimoMes);
-
-  // Calcular income do último mês
-  const incomeTotal = lancamentosUltimoMes
-    .filter(l => l.tipo === 'entrada' && l.categoria === 'income')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  // Calcular gastos fixos do último mês
-  const gastosFixos = lancamentosUltimoMes
-    .filter(l => l.tipo === 'saida' && l.categoria === 'gasto_fixo')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  // Calcular gastos variáveis do último mês
-  const gastosVariaveis = lancamentosUltimoMes
-    .filter(l => l.tipo === 'saida' && l.categoria === 'gasto_variavel')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  // Calcular rendimentos (entradas de investimento) do último mês
-  const rendimentos = lancamentosUltimoMes
-    .filter(l => l.tipo === 'entrada' && l.categoria === 'investimento')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  // Calcular fundo de emergência (TOTAL ACUMULADO de TODOS os meses)
-  const fundoEmergencia = lancamentos
-    .filter(l => l.tipo === 'saida' && l.categoria === 'fundo_emergencia')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  // Calcular dívidas (saldo total acumulado)
-  const dividas = lancamentos
-    .filter(l => l.categoria === 'divida')
-    .reduce((sum, l) => {
-      return l.tipo === 'saida' ? sum - l.valor : sum + l.valor;
-    }, 0);
-
-  // Calcular total investido (APENAS investimentos, SEM fundo de emergência)
-  const totalInvestimentos = lancamentos
-    .filter(l => l.tipo === 'saida' && l.categoria === 'investimento')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  // Calcular total de rendimentos acumulados
-  const totalRendimentos = lancamentos
-    .filter(l => l.tipo === 'entrada' && l.categoria === 'investimento')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  // Patrimônio total = investimentos + rendimentos + fundo emergência - dívidas
-  const patrimonioTotal = totalInvestimentos + totalRendimentos + fundoEmergencia - Math.abs(dividas);
-
-  // Sobra mensal
-  const totalEntradas = lancamentosUltimoMes
-    .filter(l => l.tipo === 'entrada')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  const totalSaidas = lancamentosUltimoMes
-    .filter(l => l.tipo === 'saida')
-    .reduce((sum, l) => sum + l.valor, 0);
-
-  const sobraMensal = totalEntradas - totalSaidas;
+  const ultimoMes = ultimoMesComDados(lancamentos);
+  const doMes = lancamentos.filter((l) => l.data === ultimoMes);
 
   return {
-    patrimonioTotal,
-    fundoEmergencia,
-    dividas: Math.abs(dividas),
-    gastosFixos,
-    gastosVariaveis,
-    incomeTotal,
-    rendimentos,
-    sobraMensal,
+    patrimonioTotal: patrimonio(lancamentos),
+    fundoEmergencia: soma(lancamentos, saida('fundo_emergencia')),
+    dividas: saldoDividas(lancamentos),
+    gastosFixos: soma(doMes, saida('gasto_fixo')),
+    gastosVariaveis: soma(doMes, saida('gasto_variavel')),
+    incomeTotal: soma(doMes, entrada('income')),
+    rendimentos: soma(doMes, entrada('investimento')),
+    sobraMensal: soma(doMes, entrada()) - soma(doMes, saida()),
   };
 }
 
 /**
- * Agrupa lançamentos por mês e calcula totais
+ * One row per month with data, oldest first. `patrimonio` is the running
+ * net worth at the end of that month, so the last row matches the
+ * dashboard's headline figure.
  */
 export function calcularHistoricoMensal(lancamentos: Lancamento[]): DadosMensais[] {
-  // Agrupar por mês
-  const porMes = lancamentos.reduce((acc, lancamento) => {
-    if (!acc[lancamento.data]) {
-      acc[lancamento.data] = [];
-    }
-    acc[lancamento.data].push(lancamento);
-    return acc;
-  }, {} as Record<string, Lancamento[]>);
+  const meses = [...new Set(lancamentos.map((l) => l.data))].sort();
 
-  // Calcular totais por mês
-  const historico = Object.entries(porMes).map(([mes, lancs]) => {
-    const income = lancs
-      .filter(l => l.tipo === 'entrada' && l.categoria === 'income')
-      .reduce((sum, l) => sum + l.valor, 0);
-
-    const gastos = lancs
-      .filter(l => l.tipo === 'saida' && (l.categoria === 'gasto_fixo' || l.categoria === 'gasto_variavel'))
-      .reduce((sum, l) => sum + l.valor, 0);
-
-    const investimentos = lancs
-      .filter(l => l.tipo === 'saida' && l.categoria === 'investimento')
-      .reduce((sum, l) => sum + l.valor, 0);
-
-    const rendimentos = lancs
-      .filter(l => l.tipo === 'entrada' && l.categoria === 'investimento')
-      .reduce((sum, l) => sum + l.valor, 0);
+  return meses.map((mes) => {
+    const doMes = lancamentos.filter((l) => l.data === mes);
+    const ateOMes = lancamentos.filter((l) => l.data <= mes);
 
     return {
       mes,
-      income,
-      gastos,
-      investimentos,
-      rendimentos,
-      patrimonio: 0, // Será calculado acumuladamente
+      income: soma(doMes, entrada('income')),
+      gastos: soma(doMes, saida('gasto_fixo')) + soma(doMes, saida('gasto_variavel')),
+      investimentos: soma(doMes, saida('investimento')),
+      rendimentos: soma(doMes, entrada('investimento')),
+      patrimonio: patrimonio(ateOMes),
     };
   });
-
-  // Ordenar por mês
-  historico.sort((a, b) => a.mes.localeCompare(b.mes));
-
-  // Calcular patrimônio acumulado
-  let patrimonioAcumulado = 0;
-  historico.forEach(item => {
-    patrimonioAcumulado += item.investimentos + item.rendimentos;
-    item.patrimonio = patrimonioAcumulado;
-  });
-
-  return historico;
 }
 
-/**
- * Calcula tendência percentual entre dois valores
- */
+/** Money out per category, largest first. Empty categories are left out. */
+export function calcularSaidasPorCategoria(lancamentos: Lancamento[]) {
+  const totais = new Map<Categoria, number>();
+  for (const l of lancamentos) {
+    if (l.tipo !== 'saida') continue;
+    totais.set(l.categoria, (totais.get(l.categoria) ?? 0) + l.valor);
+  }
+  return [...totais.entries()]
+    .map(([categoria, valor]) => ({ categoria, valor }))
+    .sort((a, b) => b.valor - a.valor);
+}
+
+/** Totals in, out and the difference. */
+export function calcularTotais(lancamentos: Lancamento[]) {
+  const totalEntradas = soma(lancamentos, entrada());
+  const totalSaidas = soma(lancamentos, saida());
+  return { totalEntradas, totalSaidas, saldo: totalEntradas - totalSaidas };
+}
+
+/** Percentage change between two values, rounded to one decimal. */
 export function calcularTendencia(valorAtual: number, valorAnterior: number): { value: number; isPositive: boolean } {
   if (valorAnterior === 0) {
     return { value: 0, isPositive: true };
   }
-
-  const percentual = ((valorAtual - valorAnterior) / valorAnterior) * 100;
-  
+  const percentual = ((valorAtual - valorAnterior) / Math.abs(valorAnterior)) * 100;
   return {
     value: Math.abs(Math.round(percentual * 10) / 10),
     isPositive: percentual >= 0,

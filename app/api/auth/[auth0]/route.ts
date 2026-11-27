@@ -1,7 +1,7 @@
 import { handleAuth } from '@auth0/nextjs-auth0';
-import { NextRequest } from 'next/server';
 
-const authHandler = handleAuth();
+// Auth0 serves /api/auth/login, /logout, /callback and /me from this one handler.
+const handler = handleAuth();
 
-export const GET = handleAuth();
-export const POST = handleAuth();
+export const GET = handler;
+export const POST = handler;

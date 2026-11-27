@@ -1,184 +1,153 @@
-// app/lancamentos/page.tsx
-
 'use client';
 
-import { useState } from 'react';
-import { useCurrencyStore } from '@/lib/store/currencyStore';
-
-import { AddLancamentoDialog } from '@/components/lancamentos/AddLancamentoDialog';
-import { EditLancamentoDialog } from '@/components/lancamentos/EditLancamentoDialog';
-// ... rest of imports
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
+import { Search } from 'lucide-react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  AddTransactionButton,
+  DeleteTransactionDialog,
+  TransactionDialog,
+} from '@/components/transactions/transaction-dialog';
+import { TransactionsTable } from '@/components/transactions/transactions-table';
 import { Button } from '@/components/ui/button';
-// import { useLocalStorage } from '@/lib/hooks/useLocalStorage'; // Removed
-import { useTransactions } from '@/lib/contexts/TransactionContext'; // Added
-import { Lancamento } from '@/lib/types';
-import { Trash2, ArrowUpCircle, ArrowDownCircle, Pencil } from 'lucide-react';
-import { useLanguage } from '@/lib/hooks/useLanguage';
+import { Input } from '@/components/ui/input';
+import { EmptyState, Page, PageHeader, PageLoading, Panel } from '@/components/ui/panel';
+import { Segmented } from '@/components/ui/segmented';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useTransactions } from '@/lib/contexts/TransactionContext';
+import { categoriaLabelKey, TODAS_CATEGORIAS, type Categoria, type Tipo } from '@/lib/finance/categories';
+import { useMoney } from '@/lib/hooks/useMoney';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import type { Lancamento } from '@/lib/types';
+
+type TipoFilter = 'all' | Tipo;
+type CategoriaFilter = 'all' | Categoria;
 
 export default function LancamentosPage() {
-  const { transactions: lancamentos, addTransaction, updateTransaction, deleteTransaction, isLoading } = useTransactions();
-  const isLoaded = !isLoading;
-  const [editingLancamento, setEditingLancamento] = useState<Lancamento | null>(null);
-  const { t, language } = useLanguage();
+  const { transactions, updateTransaction, deleteTransaction, isLoading } = useTransactions();
+  const { t } = useLanguage();
+  const { convertAll, format } = useMoney();
 
-  const { currency, convertValue, formatValue } = useCurrencyStore();
+  const [query, setQuery] = useState('');
+  const [tipo, setTipo] = useState<TipoFilter>('all');
+  const [categoria, setCategoria] = useState<CategoriaFilter>('all');
+  const [editing, setEditing] = useState<Lancamento | null>(null);
+  const [deleting, setDeleting] = useState<Lancamento | null>(null);
 
-  const handleAddLancamento = async (novoLancamento: Omit<Lancamento, 'id'>) => {
-    await addTransaction(novoLancamento);
+  const rows = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return convertAll(transactions)
+      .filter(
+        (l) =>
+          (tipo === 'all' || l.tipo === tipo) &&
+          (categoria === 'all' || l.categoria === categoria) &&
+          (!search || l.descricao.toLowerCase().includes(search)),
+      )
+      .sort((a, b) => b.data.localeCompare(a.data) || (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+  }, [transactions, convertAll, query, tipo, categoria]);
+
+  if (isLoading) return <PageLoading label={t('carregando')} />;
+
+  const isFiltered = query !== '' || tipo !== 'all' || categoria !== 'all';
+  const clearFilters = () => {
+    setQuery('');
+    setTipo('all');
+    setCategoria('all');
   };
 
-  const handleEditLancamento = async (lancamentoAtualizado: Lancamento) => {
-    const { id, ...data } = lancamentoAtualizado;
-    await updateTransaction(id, data);
-    setEditingLancamento(null);
-  };
-
-  const handleDeleteLancamento = async (id: string) => {
-    if (confirm(t('temCertezaExcluir'))) {
-      await deleteTransaction(id);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-  const [year, month] = dateString.split('-');
-  return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString(language, {
-    month: 'long',
-    year: 'numeric',
-  });
-};
-
-
-  const getCategoriaLabel = (categoria: string) => {
-    const labels: Record<string, string> = {
-      income: t('receitaSalario'),
-      gasto_fixo: t('gastoFixo'),
-      gasto_variavel: t('gastoVariavel'),
-      investimento: t('investimento'),
-      fundo_emergencia: t('fundoEmergenciaCategoria'),
-      divida: t('pagamentoDivida'),
-    };
-    return labels[categoria] || categoria;
-  };
-
-  const lancamentosOrdenados = [...lancamentos].sort((a, b) => b.data.localeCompare(a.data));
-
-  if (!isLoaded) {
-    return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6">
-        <p>{t('carregando')}</p>
-      </div>
-    );
-  }
+  // Edit and delete work on the stored transaction, not the converted copy shown in the table.
+  const original = (row: Lancamento) => transactions.find((l) => l.id === row.id) ?? row;
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-4 md:pt-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">{t('lancamentos')}</h2>
-        <AddLancamentoDialog onAdd={handleAddLancamento} />
-      </div>
+    <Page>
+      <PageHeader
+        title={t('lancamentos')}
+        description={`${transactions.length} ${t('lancamentosText')}`}
+        action={<AddTransactionButton />}
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('historicoLancamentos')}</CardTitle>
-          <CardDescription>
-            {t('todosRegistrosFinanceiros')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {lancamentos.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">
-              <p>{t('nenhumLancamentoRegistrado')}</p>
-              <p className="text-sm mt-2">{t('cliqueNovoLancamento')}</p>
+      {transactions.length === 0 ? (
+        <EmptyState title={t('nenhumLancamentoRegistrado')} description={t('cliqueNovoLancamento')} />
+      ) : (
+        <Panel className="p-0 md:p-0">
+          <div className="flex flex-wrap items-center gap-3 border-b p-4">
+            <div className="relative min-w-52 flex-1">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden="true"
+              />
+              <Input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('buscar')}
+                aria-label={t('buscar')}
+                className="h-10 pl-9"
+              />
+            </div>
+            <Segmented
+              label={t('tipo')}
+              value={tipo}
+              onChange={setTipo}
+              options={[
+                { value: 'all', label: t('todos') },
+                { value: 'entrada', label: t('entrada') },
+                { value: 'saida', label: t('saida') },
+              ]}
+            />
+            <Select value={categoria} onValueChange={(value) => setCategoria(value as CategoriaFilter)}>
+              <SelectTrigger className="h-10 w-full sm:w-56" aria-label={t('categoria')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('todasCategorias')}</SelectItem>
+                {TODAS_CATEGORIAS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(categoriaLabelKey(value, value === 'income' ? 'entrada' : 'saida'))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {rows.length === 0 ? (
+            <div className="flex flex-col items-start gap-3 p-6">
+              <p className="text-muted-foreground">{t('nenhumResultado')}</p>
+              <Button variant="outline" size="sm" onClick={clearFilters}>
+                {t('limparFiltros')}
+              </Button>
             </div>
           ) : (
-            <div className="overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('data')}</TableHead>
-                    <TableHead>{t('tipo')}</TableHead>
-                    <TableHead>{t('categoria')}</TableHead>
-                    <TableHead>{t('descricao')}</TableHead>
-                    <TableHead className="text-right">{t('valor')}</TableHead>
-                    <TableHead className="text-right">{t('acoes')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lancamentosOrdenados.map((lancamento) => {
-                    const convertedValue = convertValue(lancamento.valor, lancamento.currency || 'BRL');
-                    return (
-                    <TableRow key={lancamento.id}>
-                      <TableCell className="font-medium">
-                        {formatDate(lancamento.data)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {lancamento.tipo === 'entrada' ? (
-                            <ArrowUpCircle className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <ArrowDownCircle className="h-4 w-4 text-red-600" />
-                          )}
-                          <span className="capitalize">
-                            {lancamento.tipo === 'entrada' ? t('entrada') : t('saida')}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getCategoriaLabel(lancamento.categoria)}</TableCell>
-                      <TableCell>{lancamento.descricao}</TableCell>
-                      <TableCell
-                        className={`text-right font-semibold ${
-                          lancamento.tipo === 'entrada' ? 'text-green-600' : 'text-red-600'
-                        }`}
-                      >
-                        {lancamento.tipo === 'entrada' ? '+' : '-'}
-                        {formatValue(convertedValue, currency)}
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingLancamento(lancamento)}
-                          >
-                            <Pencil className="h-4 w-4 text-blue-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteLancamento(lancamento.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+            <div className="px-2 pb-2 md:px-4">
+              <TransactionsTable
+                lancamentos={rows}
+                format={format}
+                onEdit={(row) => setEditing(original(row))}
+                onDelete={(row) => setDeleting(original(row))}
+              />
             </div>
           )}
-        </CardContent>
-      </Card>
 
-      {editingLancamento && (
-        <EditLancamentoDialog
-          lancamento={editingLancamento}
-          open={!!editingLancamento}
-          onOpenChange={(open) => !open && setEditingLancamento(null)}
-          onEdit={handleEditLancamento}
-        />
+          {isFiltered && rows.length > 0 && (
+            <p className="border-t px-4 py-3 text-[13px] text-muted-foreground">
+              {rows.length} / {transactions.length} {t('lancamentosText')}
+            </p>
+          )}
+        </Panel>
       )}
-    </div>
+
+      <TransactionDialog
+        open={!!editing}
+        onOpenChange={(open) => !open && setEditing(null)}
+        lancamento={editing}
+        onSubmit={async (data) => {
+          if (editing) await updateTransaction(editing.id, data);
+        }}
+      />
+      <DeleteTransactionDialog
+        lancamento={deleting}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        onConfirm={(lancamento) => deleteTransaction(lancamento.id)}
+      />
+    </Page>
   );
 }

@@ -1,54 +1,29 @@
-// lib/utils/filterLancamentos.ts
-
+import { currentMonth } from '@/lib/finance/categories';
 import { Lancamento } from '@/lib/types';
 
-export function filterByPeriod(
-  lancamentos: Lancamento[], 
-  period: string,
-  customMonth?: string
-): Lancamento[] {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
+export type Period = 'all' | 'current' | 'last' | 'last3' | 'last6' | 'year' | 'custom';
 
+/** "YYYY-MM" for the month `offset` months before today's. */
+function monthsAgo(offset: number) {
+  const now = new Date();
+  return currentMonth(new Date(now.getFullYear(), now.getMonth() - offset, 1));
+}
+
+/** Keeps the transactions that fall in the chosen period. */
+export function filterByPeriod(lancamentos: Lancamento[], period: Period, customMonth?: string): Lancamento[] {
   switch (period) {
     case 'current':
-      // Mês atual
-      const currentMonthStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-      return lancamentos.filter(l => l.data === currentMonthStr);
-
+      return lancamentos.filter((l) => l.data === monthsAgo(0));
     case 'last':
-      // Mês passado
-      const lastMonth = new Date(now);
-      lastMonth.setMonth(currentMonth - 1);
-      const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`;
-      return lancamentos.filter(l => l.data === lastMonthStr);
-
+      return lancamentos.filter((l) => l.data === monthsAgo(1));
     case 'last3':
-      // Últimos 3 meses
-      const threeMonthsAgo = new Date(now);
-      threeMonthsAgo.setMonth(currentMonth - 2);
-      const threeMonthsStr = `${threeMonthsAgo.getFullYear()}-${String(threeMonthsAgo.getMonth() + 1).padStart(2, '0')}`;
-      return lancamentos.filter(l => l.data >= threeMonthsStr);
-
+      return lancamentos.filter((l) => l.data >= monthsAgo(2));
     case 'last6':
-      // Últimos 6 meses
-      const sixMonthsAgo = new Date(now);
-      sixMonthsAgo.setMonth(currentMonth - 5);
-      const sixMonthsStr = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}`;
-      return lancamentos.filter(l => l.data >= sixMonthsStr);
-
+      return lancamentos.filter((l) => l.data >= monthsAgo(5));
     case 'year':
-      // Este ano
-      const yearStr = `${currentYear}`;
-      return lancamentos.filter(l => l.data.startsWith(yearStr));
-
+      return lancamentos.filter((l) => l.data.startsWith(String(new Date().getFullYear())));
     case 'custom':
-      // Mês específico selecionado pelo usuário
-      if (!customMonth) return lancamentos;
-      return lancamentos.filter(l => l.data === customMonth);
-
-    case 'all':
+      return customMonth ? lancamentos.filter((l) => l.data === customMonth) : lancamentos;
     default:
       return lancamentos;
   }

@@ -5,7 +5,7 @@
   </blockquote>
 </div>
 
-<img width="1271" height="903" alt="Dashboard Preview" src="https://github.com/user-attachments/assets/860f5e53-75af-4e02-a7e2-7ec0af87849e" />
+<img alt="Planner overview: net worth, this month, cash flow and spending by category" src="docs/screenshots/dashboard.png" />
 
 <br/>
 
@@ -30,6 +30,39 @@
 
 <br/>
 
+<h2>📸 Screenshots</h2>
+
+<p>All screenshots use made-up demo data.</p>
+
+<table>
+  <tr>
+    <td width="50%"><img alt="Welcome page with sign-in, sign-up and guest mode" src="docs/screenshots/welcome.png" /></td>
+    <td width="50%"><img alt="Transactions list with search and filters" src="docs/screenshots/transactions.png" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Welcome</strong> - sign in, sign up or try it as a guest</td>
+    <td align="center"><strong>Transactions</strong> - search, filter, edit and delete</td>
+  </tr>
+  <tr>
+    <td><img alt="Reports for the last six months with totals, cash flow and categories" src="docs/screenshots/reports.png" /></td>
+    <td><img alt="First million calculator with a growth chart and yearly projection" src="docs/screenshots/calculator.png" /></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Reports</strong> - pick a period, export it as CSV</td>
+    <td align="center"><strong>Calculator</strong> - what to invest each month to hit a target</td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img alt="Add transaction form" src="docs/screenshots/new-transaction.png" width="50%" /></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><strong>New transaction</strong> - one form, any of five currencies</td>
+  </tr>
+</table>
+
+<p align="center"><img alt="Overview on a phone" src="docs/screenshots/mobile.png" width="280" /></p>
+
+<br/>
+
 <h2>✨ Core Features</h2>
 
 <h3>📊 Dashboard Analytics</h3>
@@ -44,6 +77,7 @@
 <ul>
   <li><strong>Fixed vs Variable Expenses</strong> - Separate recurring bills from your spontaneous purchases</li>
   <li><strong>Monthly Income Monitoring</strong> - Track salary, side hustles, or whatever keeps the lights on</li>
+  <li><strong>Search, Filters and CSV Export</strong> - Find any transaction, slice reports by period and take the data with you</li>
   <li><strong>Historical Trends</strong> - 6-month visualizations to spot patterns (like that suspicious spike every time a new game drops)</li>
 </ul>
 
@@ -56,8 +90,10 @@
 
 <h3>🎨 User Experience</h3>
 <ul>
-  <li><strong>Dark Mode Interface</strong> - Because who wants a blinding white screen when checking finances at 2 AM</li>
-  <li><strong>Multi-Currency Support</strong> - Currently supports GBP with extensible architecture for more currencies</li>
+  <li><strong>Dark and Light Themes</strong> - Dark by default, because who wants a blinding white screen when checking finances at 2 AM</li>
+  <li><strong>Multi-Currency Support</strong> - Log in BRL, USD, EUR, GBP or HUF and view everything converted to the currency you pick</li>
+  <li><strong>Five Languages</strong> - Portuguese, English, Hungarian, Italian and German, switched without a reload</li>
+  <li><strong>Guest Mode</strong> - Try it without an account; data stays in your browser until you sign up, then syncs</li>
   <li><strong>Responsive Design</strong> - Works on desktop, tablet, and mobile</li>
 </ul>
 
@@ -73,10 +109,26 @@
 </p>
 
 <ul>
-  <li><strong>Charts & Visualization:</strong> Custom chart components with smooth animations</li>
-  <li><strong>Styling:</strong> Modern CSS with dark theme implementation</li>
+  <li><strong>Charts & Visualization:</strong> Recharts, with a colour-blind-safe two-colour palette</li>
+  <li><strong>Styling:</strong> Tailwind CSS 4 with design tokens for dark and light themes, Radix UI primitives</li>
+  <li><strong>Auth & Data:</strong> Auth0, Prisma and MongoDB (guest mode uses localStorage)</li>
   <li><strong>State Management:</strong> Zustand</li>
   <li><strong>Currency Handling:</strong> Multi-currency architecture with locale support</li>
+</ul>
+
+<br/>
+
+<h2>🚀 Getting Started</h2>
+
+<pre><code>npm install
+npm run dev</code></pre>
+
+<p>Open <code>http://localhost:3000</code> and choose <strong>Try it as a guest</strong>: guest mode needs no setup. For accounts and cloud sync, add a <code>.env.local</code> with:</p>
+
+<ul>
+  <li><code>DATABASE_URL</code> - MongoDB connection string</li>
+  <li><code>AUTH0_SECRET</code>, <code>AUTH0_BASE_URL</code>, <code>AUTH0_ISSUER_BASE_URL</code>, <code>AUTH0_CLIENT_ID</code>, <code>AUTH0_CLIENT_SECRET</code> - Auth0 application settings</li>
+  <li><code>NEXT_PUBLIC_OPEN_EXCHANGE_RATES_APP_ID</code> - optional, for live exchange rates (built-in approximate rates are used without it)</li>
 </ul>
 
 <br/>
@@ -86,7 +138,8 @@
 <ul>
   <li>⬜ Budget planning with alerts</li>
   <li>⬜ Recurring transaction automation</li>
-  <li>⬜ Export functionality (CSV, PDF reports)</li>
+  <li>✅ CSV export</li>
+  <li>⬜ PDF reports</li>
   <li>⬜ Goal setting and tracking</li>
   <li>⬜ Multi-account management</li>
   <li>⬜ Mobile app version</li>

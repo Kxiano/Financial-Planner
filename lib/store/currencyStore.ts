@@ -13,7 +13,10 @@ interface CurrencyState {
   
   // Actions
   setCurrency: (currency: Currency) => void;
+  /** Loads rates unless the cached ones are under an hour old. */
   fetchRates: () => Promise<void>;
+  /** Loads rates now, ignoring the cache. */
+  refreshRates: () => Promise<void>;
   
   // Helpers
   convertValue: (amount: number, fromCurrency?: Currency) => number;
@@ -33,13 +36,18 @@ export const useCurrencyStore = create<CurrencyState>()(
 
       setCurrency: (currency) => set({ currency }),
 
+      refreshRates: async () => {
+        set({ lastFetchTimestamp: 0 });
+        await get().fetchRates();
+      },
+
       fetchRates: async () => {
         const { lastFetchTimestamp, exchangeRates, isLoading } = get();
         const now = Date.now();
 
         // Check if we need to fetch (cache expired or no rates)
         // If we have rates and they are less than 60 mins old, don't fetch
-        if (exchangeRates && (now - lastFetchTimestamp < CACHE_DURATION)) {
+        if (exchangeRates && lastFetchTimestamp > 0 && (now - lastFetchTimestamp < CACHE_DURATION)) {
             return;
         }
 
